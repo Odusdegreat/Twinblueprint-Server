@@ -26,7 +26,7 @@ export const createDemoRequest = async (
   } catch (error: any) {
     if (error.message === "DUPLICATE_LEAD") {
       return res.status(409).json({
-        message: "Lead already exists",
+        message: "User already exists",
       });
     }
 
