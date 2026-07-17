@@ -18,6 +18,7 @@ export const createLead = async (data: CreateLeadInput): Promise<Lead> => {
     .single();
 
   if (error) {
+    console.error("[LEAD] createLead error:", error);
     throw Object.assign(new Error("Failed to create lead"), {
       statusCode: 500,
     });
@@ -42,6 +43,7 @@ export const getLeads = async (
   ]);
 
   if (result.error) {
+    console.error("[LEAD] getLeads error:", result.error);
     throw Object.assign(new Error("Failed to fetch leads"), {
       statusCode: 500,
     });
@@ -61,6 +63,7 @@ export const getLeadById = async (id: string): Promise<Lead> => {
     .single();
 
   if (error || !data) {
+    console.error("[LEAD] getLeadById error:", error);
     throw Object.assign(new Error("Lead not found"), { statusCode: 404 });
   }
 
@@ -93,6 +96,7 @@ export const updateLead = async (
     .single();
 
   if (error || !lead) {
+    console.error("[LEAD] updateLead error:", error);
     throw Object.assign(new Error("Lead not found"), { statusCode: 404 });
   }
 
@@ -103,6 +107,7 @@ export const deleteLead = async (id: string): Promise<void> => {
   const { error } = await supabase.from("leads").delete().eq("id", id);
 
   if (error) {
+    console.error("[LEAD] deleteLead error:", error);
     throw Object.assign(new Error("Failed to delete lead"), {
       statusCode: 500,
     });
@@ -121,6 +126,7 @@ export const assignLead = async (
     .single();
 
   if (error || !lead) {
+    console.error("[LEAD] assignLead error:", error);
     throw Object.assign(new Error("Lead not found"), { statusCode: 404 });
   }
 

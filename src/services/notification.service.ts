@@ -17,6 +17,7 @@ export const createNotification = async (
     .single();
 
   if (error) {
+    console.error("[NOTIFICATION] createNotification error:", error);
     throw Object.assign(new Error("Failed to create notification"), {
       statusCode: 500,
     });
@@ -46,6 +47,7 @@ export const getNotifications = async (
   ]);
 
   if (result.error) {
+    console.error("[NOTIFICATION] getNotifications error:", result.error);
     throw Object.assign(new Error("Failed to fetch notifications"), {
       statusCode: 500,
     });
@@ -70,6 +72,7 @@ export const markAsRead = async (
     .single();
 
   if (error || !data) {
+    console.error("[NOTIFICATION] markAsRead error:", error);
     throw Object.assign(new Error("Notification not found"), {
       statusCode: 404,
     });
@@ -89,6 +92,7 @@ export const deleteNotification = async (
     .eq("user_id", userId);
 
   if (error) {
+    console.error("[NOTIFICATION] deleteNotification error:", error);
     throw Object.assign(new Error("Failed to delete notification"), {
       statusCode: 500,
     });
