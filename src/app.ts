@@ -92,6 +92,15 @@ app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 // Input sanitization
 app.use(sanitizeInput);
 
+// Health check (no auth required)
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "OK",
+    data: { uptime: process.uptime(), timestamp: new Date().toISOString() },
+  });
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/companies", companyRoutes);

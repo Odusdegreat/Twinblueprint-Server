@@ -26,19 +26,31 @@ export const createLead = async (data: CreateLeadInput): Promise<Lead> => {
   return lead as Lead;
 };
 
-export const getLeads = async (): Promise<Lead[]> => {
-  const { data, error } = await supabase
-    .from("leads")
-    .select("*")
-    .order("created_at", { ascending: false });
+export const getLeads = async (
+  page: number,
+  limit: number,
+): Promise<{ leads: Lead[]; total: number }> => {
+  const offset = (page - 1) * limit;
 
-  if (error) {
+  const [result, countResult] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1),
+    supabase.from("leads").select("id", { count: "exact", head: true }),
+  ]);
+
+  if (result.error) {
     throw Object.assign(new Error("Failed to fetch leads"), {
       statusCode: 500,
     });
   }
 
-  return (data ?? []) as Lead[];
+  return {
+    leads: (result.data ?? []) as Lead[],
+    total: countResult.count ?? 0,
+  };
 };
 
 export const getLeadById = async (id: string): Promise<Lead> => {

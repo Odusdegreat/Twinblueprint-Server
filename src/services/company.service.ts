@@ -31,19 +31,31 @@ export const createCompany = async (
   return company as Company;
 };
 
-export const getCompanies = async (): Promise<Company[]> => {
-  const { data, error } = await supabase
-    .from("companies")
-    .select("*")
-    .order("created_at", { ascending: false });
+export const getCompanies = async (
+  page: number,
+  limit: number,
+): Promise<{ companies: Company[]; total: number }> => {
+  const offset = (page - 1) * limit;
 
-  if (error) {
+  const [result, countResult] = await Promise.all([
+    supabase
+      .from("companies")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1),
+    supabase.from("companies").select("id", { count: "exact", head: true }),
+  ]);
+
+  if (result.error) {
     throw Object.assign(new Error("Failed to fetch companies"), {
       statusCode: 500,
     });
   }
 
-  return (data ?? []) as Company[];
+  return {
+    companies: (result.data ?? []) as Company[],
+    total: countResult.count ?? 0,
+  };
 };
 
 export const getCompanyById = async (id: string): Promise<Company> => {

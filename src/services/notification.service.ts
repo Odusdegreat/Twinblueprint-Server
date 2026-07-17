@@ -27,27 +27,45 @@ export const createNotification = async (
 
 export const getNotifications = async (
   userId: string,
-): Promise<Notification[]> => {
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  page: number,
+  limit: number,
+): Promise<{ notifications: Notification[]; total: number }> => {
+  const offset = (page - 1) * limit;
 
-  if (error) {
+  const [result, countResult] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
+
+  if (result.error) {
     throw Object.assign(new Error("Failed to fetch notifications"), {
       statusCode: 500,
     });
   }
 
-  return (data ?? []) as Notification[];
+  return {
+    notifications: (result.data ?? []) as Notification[],
+    total: countResult.count ?? 0,
+  };
 };
 
-export const markAsRead = async (id: string): Promise<Notification> => {
+export const markAsRead = async (
+  id: string,
+  userId: string,
+): Promise<Notification> => {
   const { data, error } = await supabase
     .from("notifications")
     .update({ is_read: true })
     .eq("id", id)
+    .eq("user_id", userId)
     .select()
     .single();
 
@@ -60,11 +78,15 @@ export const markAsRead = async (id: string): Promise<Notification> => {
   return data as Notification;
 };
 
-export const deleteNotification = async (id: string): Promise<void> => {
+export const deleteNotification = async (
+  id: string,
+  userId: string,
+): Promise<void> => {
   const { error } = await supabase
     .from("notifications")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
 
   if (error) {
     throw Object.assign(new Error("Failed to delete notification"), {

@@ -9,6 +9,7 @@
     { "url": "http://localhost:5000", "description": "Development" }
   ],
   "tags": [
+    { "name": "Health", "description": "Health check" },
     { "name": "Auth", "description": "Admin login, current user, logout" },
     { "name": "Leads", "description": "Lead management CRUD + assignment" },
     { "name": "Companies", "description": "Company management CRUD" },
@@ -119,7 +120,7 @@
           "industry": { "type": "string", "example": "Technology" },
           "address": { "type": "string", "example": "123 Main St, City, Country" }
         },
-        "required": ["name"]
+        "required": ["company_name"]
       },
       "UpdateCompanyInput": {
         "type": "object",
@@ -177,6 +178,37 @@
     }
   },
   "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Returns server uptime and timestamp. No authentication required.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "OK" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "uptime": { "type": "number" },
+                        "timestamp": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/login": {
       "post": {
         "tags": ["Auth"],
@@ -320,8 +352,12 @@
       "get": {
         "tags": ["Leads"],
         "summary": "List all leads",
-        "description": "Returns all leads ordered by creation date (newest first).",
+        "description": "Returns leads ordered by creation date (newest first). Supports pagination.",
         "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -337,6 +373,15 @@
                         "leads": {
                           "type": "array",
                           "items": { "$ref": "#/components/schemas/Lead" }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": { "type": "integer" },
+                            "limit": { "type": "integer" },
+                            "total": { "type": "integer" },
+                            "pages": { "type": "integer" }
+                          }
                         }
                       }
                     }
@@ -535,7 +580,12 @@
       "get": {
         "tags": ["Companies"],
         "summary": "List all companies",
+        "description": "Supports pagination.",
         "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -551,6 +601,15 @@
                         "companies": {
                           "type": "array",
                           "items": { "$ref": "#/components/schemas/Company" }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": { "type": "integer" },
+                            "limit": { "type": "integer" },
+                            "total": { "type": "integer" },
+                            "pages": { "type": "integer" }
+                          }
                         }
                       }
                     }
@@ -707,8 +766,12 @@
       "get": {
         "tags": ["Notifications"],
         "summary": "Get current user's notifications",
-        "description": "Returns all notifications for the authenticated user, newest first.",
+        "description": "Returns notifications for the authenticated user, newest first. Supports pagination.",
         "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -724,6 +787,15 @@
                         "notifications": {
                           "type": "array",
                           "items": { "$ref": "#/components/schemas/Notification" }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": { "type": "integer" },
+                            "limit": { "type": "integer" },
+                            "total": { "type": "integer" },
+                            "pages": { "type": "integer" }
+                          }
                         }
                       }
                     }

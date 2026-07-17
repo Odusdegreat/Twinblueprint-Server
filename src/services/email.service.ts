@@ -1,8 +1,6 @@
 import { Resend } from "resend";
 import { env } from "../config/env.config.ts";
 
-const resend = new Resend(env.RESEND_API_KEY);
-
 interface SendEmailParams {
   to: string | string[];
   subject: string;
@@ -10,62 +8,84 @@ interface SendEmailParams {
   from?: string;
 }
 
-export const sendEmail = async ({
-  to,
-  subject,
-  html,
-  from = env.FROM_EMAIL,
-}: SendEmailParams): Promise<void> => {
-  try {
-    const { error } = await resend.emails.send({
-      from,
-      to,
-      subject,
-      html,
-    });
-
-    if (error) {
-      console.error("[EMAIL] Resend error:", error);
-      throw Object.assign(new Error("Failed to send email"), {
-        statusCode: 502,
-      });
-    }
-  } catch (err) {
-    if (err instanceof Error && "statusCode" in err) throw err;
-
-    console.error("[EMAIL] Unexpected error:", err);
-    throw Object.assign(new Error("Failed to send email"), {
-      statusCode: 502,
-    });
-  }
-};
-
-interface LeadNotificationParams {
-  to: string;
-  leadName: string;
-  leadEmail: string;
-  company?: string;
+interface EmailResponse {
+  success: boolean;
+  message: string;
+  data?: { id: string };
+  error?: string;
 }
 
-export const sendLeadNotification = async ({
-  to,
-  leadName,
-  leadEmail,
-  company,
-}: LeadNotificationParams): Promise<void> => {
-  const html = `
-    <h2>New Lead Notification</h2>
-    <p>A new lead has been submitted.</p>
-    <ul>
-      <li><strong>Name:</strong> ${leadName}</li>
-      <li><strong>Email:</strong> ${leadEmail}</li>
-      ${company ? `<li><strong>Company:</strong> ${company}</li>` : ""}
-    </ul>
-  `;
+class EmailService {
+  private resend: Resend;
+  private defaultFrom: string;
 
-  await sendEmail({
+  constructor() {
+    this.resend = new Resend(env.RESEND_API_KEY);
+    this.defaultFrom = env.FROM_EMAIL;
+  }
+
+  async sendEmail({
     to,
-    subject: `New Lead: ${leadName}`,
+    subject,
     html,
-  });
-};
+    from = this.defaultFrom,
+  }: SendEmailParams): Promise<EmailResponse> {
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from,
+        to,
+        subject,
+        html,
+      });
+
+      if (error) {
+        console.error("[EMAIL] Resend error:", error);
+        return {
+          success: false,
+          message: "Failed to send email",
+          error: error.message,
+        };
+      }
+
+      return {
+        success: true,
+        message: "Email sent successfully",
+        data: { id: data?.id ?? "" },
+      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unknown error occurred";
+      console.error("[EMAIL] Unexpected error:", err);
+      return {
+        success: false,
+        message: "Failed to send email",
+        error: message,
+      };
+    }
+  }
+
+  async sendLeadNotification(params: {
+    to: string;
+    leadName: string;
+    leadEmail: string;
+    company?: string;
+  }): Promise<EmailResponse> {
+    const html = `
+      <h2>New Lead Notification</h2>
+      <p>A new lead has been submitted.</p>
+      <ul>
+        <li><strong>Name:</strong> ${params.leadName}</li>
+        <li><strong>Email:</strong> ${params.leadEmail}</li>
+        ${params.company ? `<li><strong>Company:</strong> ${params.company}</li>` : ""}
+      </ul>
+    `;
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `New Lead: ${params.leadName}`,
+      html,
+    });
+  }
+}
+
+export const emailService = new EmailService();

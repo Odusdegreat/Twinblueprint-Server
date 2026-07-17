@@ -1,10 +1,20 @@
 import type { Request, Response } from "express";
 import * as leadService from "../services/lead.service.ts";
+import { emailService } from "../services/email.service.ts";
 
 const getId = (req: Request): string => req.params.id as string;
 
 export const createLead = async (req: Request, res: Response) => {
   const lead = await leadService.createLead(req.body);
+
+  emailService
+    .sendLeadNotification({
+      to: "twinblueprints@gmail.com",
+      leadName: lead.full_name,
+      leadEmail: lead.email,
+      company: lead.company ?? undefined,
+    })
+    .catch((err) => console.error("[LEAD] Email notification failed:", err));
 
   res.status(201).json({
     success: true,
@@ -13,12 +23,14 @@ export const createLead = async (req: Request, res: Response) => {
   });
 };
 
-export const getLeads = async (_req: Request, res: Response) => {
-  const leads = await leadService.getLeads();
+export const getLeads = async (req: Request, res: Response) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const { leads, total } = await leadService.getLeads(page, limit);
 
   res.status(200).json({
     success: true,
-    data: { leads },
+    data: { leads, pagination: { page, limit, total, pages: Math.ceil(total / limit) } },
   });
 };
 

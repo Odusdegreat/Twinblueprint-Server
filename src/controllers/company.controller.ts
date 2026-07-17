@@ -13,12 +13,14 @@ export const createCompany = async (req: Request, res: Response) => {
   });
 };
 
-export const getCompanies = async (_req: Request, res: Response) => {
-  const companies = await companyService.getCompanies();
+export const getCompanies = async (req: Request, res: Response) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const { companies, total } = await companyService.getCompanies(page, limit);
 
   res.status(200).json({
     success: true,
-    data: { companies },
+    data: { companies, pagination: { page, limit, total, pages: Math.ceil(total / limit) } },
   });
 };
 
