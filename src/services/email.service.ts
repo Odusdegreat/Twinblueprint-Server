@@ -1,29 +1,71 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
+import { env } from "../config/env.config.ts";
 
-export const sendDemoEmail = async (data: {
-  fullName: string;
-  workEmail: string;
+const resend = new Resend(env.RESEND_API_KEY);
+
+interface SendEmailParams {
+  to: string | string[];
+  subject: string;
+  html: string;
+  from?: string;
+}
+
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  from = env.FROM_EMAIL,
+}: SendEmailParams): Promise<void> => {
+  try {
+    const { error } = await resend.emails.send({
+      from,
+      to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("[EMAIL] Resend error:", error);
+      throw Object.assign(new Error("Failed to send email"), {
+        statusCode: 502,
+      });
+    }
+  } catch (err) {
+    if (err instanceof Error && "statusCode" in err) throw err;
+
+    console.error("[EMAIL] Unexpected error:", err);
+    throw Object.assign(new Error("Failed to send email"), {
+      statusCode: 502,
+    });
+  }
+};
+
+interface LeadNotificationParams {
+  to: string;
+  leadName: string;
+  leadEmail: string;
   company?: string;
-}) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
+}
+
+export const sendLeadNotification = async ({
+  to,
+  leadName,
+  leadEmail,
+  company,
+}: LeadNotificationParams): Promise<void> => {
+  const html = `
+    <h2>New Lead Notification</h2>
+    <p>A new lead has been submitted.</p>
+    <ul>
+      <li><strong>Name:</strong> ${leadName}</li>
+      <li><strong>Email:</strong> ${leadEmail}</li>
+      ${company ? `<li><strong>Company:</strong> ${company}</li>` : ""}
+    </ul>
+  `;
+
+  await sendEmail({
+    to,
+    subject: `New Lead: ${leadName}`,
+    html,
   });
-
-  const mailOptions = {
-    from: `"TwinBlueprint" <${process.env.EMAIL_USER}>`,
-    to: process.env.EMAIL_USER, // you receive it
-    subject: "📩 New Demo Request",
-    html: `
-      <h2>New Demo Request</h2>
-      <p><strong>Name:</strong> ${data.fullName}</p>
-      <p><strong>Email:</strong> ${data.workEmail}</p>
-      <p><strong>Company:</strong> ${data.company || "N/A"}</p>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
 };

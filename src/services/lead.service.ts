@@ -1,0 +1,116 @@
+import { supabase } from "../config/supabase.ts";
+import type { Lead } from "../types/lead.types.ts";
+import type { CreateLeadInput, UpdateLeadInput } from "../validations/lead.validation.ts";
+
+export const createLead = async (data: CreateLeadInput): Promise<Lead> => {
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .insert({
+      full_name: data.full_name,
+      email: data.email,
+      company: data.company ?? null,
+      job_title: data.job_title ?? null,
+      phone: data.phone ?? null,
+      industry: data.industry ?? null,
+      status: "new",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw Object.assign(new Error("Failed to create lead"), {
+      statusCode: 500,
+    });
+  }
+
+  return lead as Lead;
+};
+
+export const getLeads = async (): Promise<Lead[]> => {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw Object.assign(new Error("Failed to fetch leads"), {
+      statusCode: 500,
+    });
+  }
+
+  return (data ?? []) as Lead[];
+};
+
+export const getLeadById = async (id: string): Promise<Lead> => {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    throw Object.assign(new Error("Lead not found"), { statusCode: 404 });
+  }
+
+  return data as Lead;
+};
+
+export const updateLead = async (
+  id: string,
+  data: UpdateLeadInput,
+): Promise<Lead> => {
+  const updates: Record<string, unknown> = {};
+
+  if (data.full_name !== undefined) updates.full_name = data.full_name;
+  if (data.email !== undefined) updates.email = data.email;
+  if (data.company !== undefined) updates.company = data.company;
+  if (data.job_title !== undefined) updates.job_title = data.job_title;
+  if (data.phone !== undefined) updates.phone = data.phone;
+  if (data.industry !== undefined) updates.industry = data.industry;
+  if (data.status !== undefined) updates.status = data.status;
+
+  if (Object.keys(updates).length === 0) {
+    throw Object.assign(new Error("No fields to update"), { statusCode: 400 });
+  }
+
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error || !lead) {
+    throw Object.assign(new Error("Lead not found"), { statusCode: 404 });
+  }
+
+  return lead as Lead;
+};
+
+export const deleteLead = async (id: string): Promise<void> => {
+  const { error } = await supabase.from("leads").delete().eq("id", id);
+
+  if (error) {
+    throw Object.assign(new Error("Failed to delete lead"), {
+      statusCode: 500,
+    });
+  }
+};
+
+export const assignLead = async (
+  id: string,
+  assignedTo: string,
+): Promise<Lead> => {
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .update({ assigned_to: assignedTo })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error || !lead) {
+    throw Object.assign(new Error("Lead not found"), { statusCode: 404 });
+  }
+
+  return lead as Lead;
+};
