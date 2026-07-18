@@ -5,8 +5,35 @@ const USERNAME = "admin";
 const PASSWORD = "Metadology01!";
 const EMAIL = "twinblueprints@gmail.com";
 
-const INDEXES_SQL = `
--- Run these in Supabase SQL Editor for better query performance:
+const SETUP_SQL = `
+-- =====================================================
+-- Run ALL of these in Supabase SQL Editor (one-time)
+-- =====================================================
+
+-- Fix type mismatch: users.id is int8 but notifications.user_id / leads.assigned_to are UUID
+-- Notifications
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_user_id_fkey;
+ALTER TABLE notifications ALTER COLUMN user_id TYPE bigint USING user_id::bigint;
+ALTER TABLE notifications ADD FOREIGN KEY (user_id) REFERENCES users(id);
+
+-- Leads
+ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_assigned_to_fkey;
+ALTER TABLE leads ALTER COLUMN assigned_to TYPE bigint USING assigned_to::bigint;
+ALTER TABLE leads ADD FOREIGN KEY (assigned_to) REFERENCES users(id);
+
+-- Grants
+GRANT ALL ON public.users TO service_role;
+GRANT ALL ON public.users TO authenticated;
+GRANT ALL ON public.leads TO service_role;
+GRANT ALL ON public.leads TO authenticated;
+GRANT ALL ON public.companies TO service_role;
+GRANT ALL ON public.companies TO authenticated;
+GRANT ALL ON public.notifications TO service_role;
+GRANT ALL ON public.notifications TO authenticated;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- Indexes (for query performance)
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads (email);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads (status);
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads (created_at DESC);
@@ -51,8 +78,8 @@ const seed = async () => {
     console.log("  Change the password after first login!");
   }
 
-  console.log("\nRecommended indexes (run in Supabase SQL Editor):");
-  console.log(INDEXES_SQL);
+  console.log("\nRun this SQL in Supabase SQL Editor (one-time setup):");
+  console.log(SETUP_SQL);
 };
 
 seed();

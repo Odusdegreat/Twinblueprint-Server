@@ -20,7 +20,7 @@ export const updateLeadSchema = z.object({
 });
 
 export const assignLeadSchema = z.object({
-  assigned_to: z.string().uuid("Invalid user ID"),
+  assigned_to: z.string().min(1, "Invalid user ID"),
 });
 
 export const leadIdParamSchema = z.object({
