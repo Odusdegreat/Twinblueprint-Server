@@ -7,7 +7,7 @@ export const createCampaignSchema = z.object({
   opened: z.number().min(0).default(0),
   clicked: z.number().min(0).default(0),
   status: z.enum(["Completed", "Active"]).default("Active"),
-  date: z.string().min(1, "Date is required"),
+  campaign_date: z.string().min(1, "Date is required"),
 });
 
 export const updateCampaignSchema = z.object({
@@ -17,11 +17,7 @@ export const updateCampaignSchema = z.object({
   opened: z.number().min(0).optional(),
   clicked: z.number().min(0).optional(),
   status: z.enum(["Completed", "Active"]).optional(),
-  date: z.string().min(1).optional(),
-});
-
-export const campaignIdParamSchema = z.object({
-  id: z.string().uuid("Invalid campaign ID"),
+  campaign_date: z.string().min(1).optional(),
 });
 
 export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;

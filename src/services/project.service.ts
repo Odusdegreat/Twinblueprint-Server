@@ -8,8 +8,8 @@ export const createProject = async (data: CreateProjectInput): Promise<Project> 
     .insert({
       project: data.project,
       client: data.client,
-      start: data.start,
-      end: data.end,
+      start_date: data.start_date,
+      end_date: data.end_date,
       progress: data.progress,
       suppliers: data.suppliers,
       uses_3d: data.uses_3d,
@@ -73,8 +73,8 @@ export const updateProject = async (id: string, data: UpdateProjectInput): Promi
 
   if (data.project !== undefined) updates.project = data.project;
   if (data.client !== undefined) updates.client = data.client;
-  if (data.start !== undefined) updates.start = data.start;
-  if (data.end !== undefined) updates.end = data.end;
+  if (data.start_date !== undefined) updates.start_date = data.start_date;
+  if (data.end_date !== undefined) updates.end_date = data.end_date;
   if (data.progress !== undefined) updates.progress = data.progress;
   if (data.suppliers !== undefined) updates.suppliers = data.suppliers;
   if (data.uses_3d !== undefined) updates.uses_3d = data.uses_3d;

@@ -2,8 +2,8 @@ export interface Project {
   id: string;
   project: string;
   client: string;
-  start: string;
-  end: string;
+  start_date: string;
+  end_date: string;
   progress: number;
   suppliers: string[];
   uses_3d: boolean;

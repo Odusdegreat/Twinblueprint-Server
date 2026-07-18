@@ -9,7 +9,7 @@ export interface Campaign {
   opened: number;
   clicked: number;
   status: CampaignStatus;
-  date: string;
+  campaign_date: string;
   created_at: string;
 }
 

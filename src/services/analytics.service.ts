@@ -32,8 +32,8 @@ export const getWeeklyData = async (weeks: number): Promise<WeeklyData[]> => {
       .gte("created_at", startDate.toISOString()),
     supabase
       .from("campaigns")
-      .select("sent, opened, clicked, date")
-      .gte("date", startDate.toISOString().split("T")[0] ?? ""),
+      .select("sent, opened, clicked, campaign_date")
+      .gte("campaign_date", startDate.toISOString().split("T")[0] ?? ""),
   ]);
 
   if (leadsResult.error) {
@@ -58,7 +58,7 @@ export const getWeeklyData = async (weeks: number): Promise<WeeklyData[]> => {
 
   const campaigns = campaignsResult.data ?? [];
   for (const c of campaigns) {
-    const d = new Date(c.date);
+    const d = new Date(c.campaign_date);
     const weekNum = Math.floor((d.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
     const key = `W${Math.min(weekNum, weeks)}`;
     const entry = weeklyMap.get(key);

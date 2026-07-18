@@ -7,6 +7,6 @@ export interface Bid {
   phase: BidPhase;
   deadline: string;
   suppliers: string[];
-  value: string;
+  value: number | null;
   created_at: string;
 }

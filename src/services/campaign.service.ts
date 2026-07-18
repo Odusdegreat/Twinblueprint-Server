@@ -12,7 +12,7 @@ export const createCampaign = async (data: CreateCampaignInput): Promise<Campaig
       opened: data.opened,
       clicked: data.clicked,
       status: data.status,
-      date: data.date,
+      campaign_date: data.campaign_date,
     })
     .select()
     .single();
@@ -75,7 +75,7 @@ export const updateCampaign = async (id: string, data: UpdateCampaignInput): Pro
   if (data.opened !== undefined) updates.opened = data.opened;
   if (data.clicked !== undefined) updates.clicked = data.clicked;
   if (data.status !== undefined) updates.status = data.status;
-  if (data.date !== undefined) updates.date = data.date;
+  if (data.campaign_date !== undefined) updates.campaign_date = data.campaign_date;
 
   if (Object.keys(updates).length === 0) {
     throw Object.assign(new Error("No fields to update"), { statusCode: 400 });
