@@ -6,7 +6,9 @@ export const createLeadSchema = z.object({
   company: z.string().optional(),
   job_title: z.string().optional(),
   phone: z.string().optional(),
-  industry: z.string().optional(),
+  category: z.string().optional(),
+  applications: z.number().min(0).default(0),
+  score: z.number().min(0).max(100).default(0),
 });
 
 export const updateLeadSchema = z.object({
@@ -15,7 +17,9 @@ export const updateLeadSchema = z.object({
   company: z.string().nullable().optional(),
   job_title: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
-  industry: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  applications: z.number().min(0).optional(),
+  score: z.number().min(0).max(100).optional(),
   status: z.enum(["new", "contacted", "qualified", "lost", "won"]).optional(),
 });
 

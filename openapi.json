@@ -60,13 +60,15 @@
           "company": { "type": "string", "nullable": true },
           "job_title": { "type": "string", "nullable": true },
           "phone": { "type": "string", "nullable": true },
-          "industry": { "type": "string", "nullable": true },
+          "category": { "type": "string", "nullable": true },
+          "applications": { "type": "integer" },
+          "score": { "type": "integer" },
           "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost", "won"] },
-          "assigned_to": { "type": "string", "format": "uuid", "nullable": true },
+          "assigned_to": { "type": "string", "nullable": true },
           "created_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" }
         },
-        "required": ["id", "full_name", "email", "status", "created_at", "updated_at"]
+        "required": ["id", "full_name", "email", "applications", "score", "status", "created_at", "updated_at"]
       },
       "CreateLeadInput": {
         "type": "object",
@@ -76,7 +78,9 @@
           "company": { "type": "string", "example": "Acme Inc." },
           "job_title": { "type": "string", "example": "CTO" },
           "phone": { "type": "string", "example": "+1234567890" },
-          "industry": { "type": "string", "example": "Technology" }
+          "category": { "type": "string", "example": "Technology" },
+          "applications": { "type": "integer", "example": 3 },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100, "example": 75 }
         },
         "required": ["full_name", "email"]
       },
@@ -88,7 +92,9 @@
           "company": { "type": "string", "nullable": true },
           "job_title": { "type": "string", "nullable": true },
           "phone": { "type": "string", "nullable": true },
-          "industry": { "type": "string", "nullable": true },
+          "category": { "type": "string", "nullable": true },
+          "applications": { "type": "integer" },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100 },
           "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost", "won"] }
         }
       },
@@ -166,7 +172,7 @@
           "company": { "type": "string", "example": "Acme Inc." },
           "jobTitle": { "type": "string", "example": "CTO" },
           "phone": { "type": "string", "example": "+1234567890" },
-          "industry": { "type": "string", "example": "Technology" }
+          "category": { "type": "string", "example": "Technology" }
         },
         "required": ["fullName", "workEmail"]
       },

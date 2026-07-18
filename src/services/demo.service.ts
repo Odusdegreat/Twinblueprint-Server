@@ -20,7 +20,7 @@ export const createDemoService = async (data: CreateDemoRequestDTO) => {
       company: data.company,
       job_title: data.jobTitle,
       phone: data.phone,
-      industry: data.industry,
+      category: data.category,
       status: "new",
     })
     .select()

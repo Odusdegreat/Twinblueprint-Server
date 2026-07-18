@@ -6,7 +6,7 @@ export const createDemoRequestSchema = z.object({
   company: z.string().optional(),
   jobTitle: z.string().optional(),
   phone: z.string().optional(),
-  industry: z.string().optional(),
+  category: z.string().optional(),
 });
 
 export type CreateDemoRequestInput = z.infer<typeof createDemoRequestSchema>;

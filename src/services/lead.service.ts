@@ -11,7 +11,9 @@ export const createLead = async (data: CreateLeadInput): Promise<Lead> => {
       company: data.company ?? null,
       job_title: data.job_title ?? null,
       phone: data.phone ?? null,
-      industry: data.industry ?? null,
+      category: data.category ?? null,
+      applications: data.applications,
+      score: data.score,
       status: "new",
     })
     .select()
@@ -81,7 +83,9 @@ export const updateLead = async (
   if (data.company !== undefined) updates.company = data.company;
   if (data.job_title !== undefined) updates.job_title = data.job_title;
   if (data.phone !== undefined) updates.phone = data.phone;
-  if (data.industry !== undefined) updates.industry = data.industry;
+  if (data.category !== undefined) updates.category = data.category;
+  if (data.applications !== undefined) updates.applications = data.applications;
+  if (data.score !== undefined) updates.score = data.score;
   if (data.status !== undefined) updates.status = data.status;
 
   if (Object.keys(updates).length === 0) {

@@ -4,5 +4,5 @@ export interface CreateDemoRequestDTO {
   company?: string;
   jobTitle?: string;
   phone?: string;
-  industry?: string;
+  category?: string;
 }

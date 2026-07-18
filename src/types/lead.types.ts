@@ -7,7 +7,9 @@ export interface Lead {
   company: string | null;
   job_title: string | null;
   phone: string | null;
-  industry: string | null;
+  category: string | null;
+  applications: number;
+  score: number;
   status: LeadStatus;
   assigned_to: string | null;
   created_at: string;
