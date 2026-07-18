@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "TwinBlueprint Server API",
-    "description": "REST API for TwinBlueprint — leads, companies, notifications, and auth.",
-    "version": "1.0.0"
+    "description": "REST API for TwinBlueprint — leads, companies, notifications, bids, projects, campaigns, analytics, and auth.",
+    "version": "2.0.0"
   },
   "servers": [
     { "url": "http://localhost:5000", "description": "Development" }
@@ -14,6 +14,10 @@
     { "name": "Leads", "description": "Lead management CRUD + assignment" },
     { "name": "Companies", "description": "Company management CRUD" },
     { "name": "Notifications", "description": "User notifications" },
+    { "name": "Bids", "description": "Active bid management" },
+    { "name": "Projects", "description": "Inflight project tracking" },
+    { "name": "Campaigns", "description": "Outreach campaign management" },
+    { "name": "Analytics", "description": "Analytics, KPIs, and funnel data" },
     { "name": "Demo", "description": "Public demo request submission" }
   ],
   "components": {
@@ -174,6 +178,138 @@
           "stack": { "type": "string", "description": "Only included in development" }
         },
         "required": ["success", "message"]
+      },
+      "Bid": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "project": { "type": "string" },
+          "client": { "type": "string" },
+          "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
+          "deadline": { "type": "string" },
+          "suppliers": { "type": "array", "items": { "type": "string" } },
+          "value": { "type": "string", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "project", "client", "phase", "deadline", "suppliers", "created_at"]
+      },
+      "CreateBidInput": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "string", "example": "Hudson Yards Phase 4" },
+          "client": { "type": "string", "example": "Related Companies" },
+          "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
+          "deadline": { "type": "string", "example": "2026-05-15" },
+          "suppliers": { "type": "array", "items": { "type": "string" }, "example": ["Turner", "Skanska"] },
+          "value": { "type": "string", "example": "$420M" }
+        },
+        "required": ["project", "client", "phase", "deadline"]
+      },
+      "UpdateBidInput": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "string" },
+          "client": { "type": "string" },
+          "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
+          "deadline": { "type": "string" },
+          "suppliers": { "type": "array", "items": { "type": "string" } },
+          "value": { "type": "string", "nullable": true }
+        }
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "project": { "type": "string" },
+          "client": { "type": "string" },
+          "start": { "type": "string" },
+          "end": { "type": "string" },
+          "progress": { "type": "integer" },
+          "suppliers": { "type": "array", "items": { "type": "string" } },
+          "uses_3d": { "type": "boolean" },
+          "competitor": { "type": "string", "nullable": true },
+          "issue": { "type": "string", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "project", "client", "start", "end", "progress", "suppliers", "uses_3d", "created_at"]
+      },
+      "CreateProjectInput": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "string", "example": "Miami Worldcenter" },
+          "client": { "type": "string", "example": "MDM Group" },
+          "start": { "type": "string", "example": "2024-03" },
+          "end": { "type": "string", "example": "2027-08" },
+          "progress": { "type": "integer", "minimum": 0, "maximum": 100, "example": 42 },
+          "suppliers": { "type": "array", "items": { "type": "string" }, "example": ["Suffolk", "Moss"] },
+          "uses_3d": { "type": "boolean", "example": true },
+          "competitor": { "type": "string", "nullable": true, "example": "Enscape" },
+          "issue": { "type": "string", "nullable": true, "example": "Clash detection delays" }
+        },
+        "required": ["project", "client", "start", "end"]
+      },
+      "UpdateProjectInput": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "string" },
+          "client": { "type": "string" },
+          "start": { "type": "string" },
+          "end": { "type": "string" },
+          "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "suppliers": { "type": "array", "items": { "type": "string" } },
+          "uses_3d": { "type": "boolean" },
+          "competitor": { "type": "string", "nullable": true },
+          "issue": { "type": "string", "nullable": true }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["LinkedIn", "Email"] },
+          "sent": { "type": "integer" },
+          "opened": { "type": "integer" },
+          "clicked": { "type": "integer" },
+          "status": { "type": "string", "enum": ["Completed", "Active"] },
+          "date": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name", "type", "sent", "opened", "clicked", "status", "date", "created_at"]
+      },
+      "CreateCampaignInput": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "C-Suite LinkedIn Wave 1" },
+          "type": { "type": "string", "enum": ["LinkedIn", "Email"] },
+          "sent": { "type": "integer", "example": 245 },
+          "opened": { "type": "integer", "example": 187 },
+          "clicked": { "type": "integer", "example": 63 },
+          "status": { "type": "string", "enum": ["Completed", "Active"] },
+          "date": { "type": "string", "example": "2026-03-15" }
+        },
+        "required": ["name", "type", "date"]
+      },
+      "UpdateCampaignInput": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["LinkedIn", "Email"] },
+          "sent": { "type": "integer" },
+          "opened": { "type": "integer" },
+          "clicked": { "type": "integer" },
+          "status": { "type": "string", "enum": ["Completed", "Active"] },
+          "date": { "type": "string" }
+        }
+      },
+      "CampaignStats": {
+        "type": "object",
+        "properties": {
+          "total_sent": { "type": "integer" },
+          "total_opens": { "type": "integer" },
+          "total_clicks": { "type": "integer" },
+          "avg_ctr": { "type": "number" }
+        }
       }
     }
   },
@@ -902,6 +1038,384 @@
           "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "409": { "description": "Duplicate lead", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "429": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/bids": {
+      "get": {
+        "tags": ["Bids"],
+        "summary": "List all bids",
+        "description": "Supports pagination.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "bids": { "type": "array", "items": { "$ref": "#/components/schemas/Bid" } },
+                        "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "pages": { "type": "integer" } } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Bids"],
+        "summary": "Create a bid",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateBidInput" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Bid created",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "bid": { "$ref": "#/components/schemas/Bid" } } } } } } }
+          },
+          "400": { "description": "Validation failed" }
+        }
+      }
+    },
+    "/api/bids/{id}": {
+      "get": {
+        "tags": ["Bids"],
+        "summary": "Get bid by ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "bid": { "$ref": "#/components/schemas/Bid" } } } } } } } },
+          "404": { "description": "Bid not found" }
+        }
+      },
+      "patch": {
+        "tags": ["Bids"],
+        "summary": "Update a bid",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateBidInput" } } } },
+        "responses": {
+          "200": { "description": "Bid updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "bid": { "$ref": "#/components/schemas/Bid" } } } } } } } },
+          "400": { "description": "Validation failed" },
+          "404": { "description": "Bid not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Bids"],
+        "summary": "Delete a bid",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Bid deleted" },
+          "403": { "description": "Admin only" }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "List all projects",
+        "description": "Supports pagination.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "projects": { "type": "array", "items": { "$ref": "#/components/schemas/Project" } },
+                        "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "pages": { "type": "integer" } } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Create a project",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateProjectInput" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "project": { "$ref": "#/components/schemas/Project" } } } } } } }
+          },
+          "400": { "description": "Validation failed" }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Get project by ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "project": { "$ref": "#/components/schemas/Project" } } } } } } } },
+          "404": { "description": "Project not found" }
+        }
+      },
+      "patch": {
+        "tags": ["Projects"],
+        "summary": "Update a project",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProjectInput" } } } },
+        "responses": {
+          "200": { "description": "Project updated" },
+          "400": { "description": "Validation failed" },
+          "404": { "description": "Project not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Projects"],
+        "summary": "Delete a project",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Project deleted" },
+          "403": { "description": "Admin only" }
+        }
+      }
+    },
+    "/api/campaigns": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "List all campaigns",
+        "description": "Supports pagination.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "campaigns": { "type": "array", "items": { "$ref": "#/components/schemas/Campaign" } },
+                        "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "pages": { "type": "integer" } } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "Create a campaign",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCampaignInput" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Campaign created",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } } } } } } }
+          },
+          "400": { "description": "Validation failed" }
+        }
+      }
+    },
+    "/api/campaigns/stats": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "Get campaign summary stats",
+        "description": "Returns total sent, opens, clicks, and average CTR across all campaigns.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/CampaignStats" } } } } }
+          }
+        }
+      }
+    },
+    "/api/campaigns/{id}": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "Get campaign by ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } } } } } } } },
+          "404": { "description": "Campaign not found" }
+        }
+      },
+      "patch": {
+        "tags": ["Campaigns"],
+        "summary": "Update a campaign",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCampaignInput" } } } },
+        "responses": {
+          "200": { "description": "Campaign updated" },
+          "400": { "description": "Validation failed" },
+          "404": { "description": "Campaign not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Campaigns"],
+        "summary": "Delete a campaign",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Campaign deleted" },
+          "403": { "description": "Admin only" }
+        }
+      }
+    },
+    "/api/analytics/weekly": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get weekly trend data",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "weeks", "in": "query", "schema": { "type": "integer", "default": 8, "minimum": 1, "maximum": 52 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "weekly": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "week": { "type": "string" },
+                              "leads": { "type": "integer" },
+                              "emails": { "type": "integer" },
+                              "opens": { "type": "integer" },
+                              "clicks": { "type": "integer" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/funnel": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get conversion funnel",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "funnel": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "stage": { "type": "string" },
+                              "count": { "type": "integer" },
+                              "pct": { "type": "integer" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/kpis": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get KPI summary",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "lead_growth": { "type": "string", "example": "+147%" },
+                        "qualified_rate": { "type": "number" },
+                        "email_open_rate": { "type": "number" },
+                        "click_through": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
