@@ -25,6 +25,11 @@ import {
 
 const app = express();
 
+// Raw OpenAPI JSON spec
+app.get("/api-docs.json", (_req, res) => {
+  res.json(openapiSpec);
+});
+
 // API docs — mounted before helmet so Swagger UI assets are not blocked by CSP
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
