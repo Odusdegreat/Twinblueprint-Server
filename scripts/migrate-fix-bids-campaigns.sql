@@ -1,10 +1,20 @@
--- Migration: Fix bids table (was created with wrong column types)
--- Run this in Supabase SQL Editor
+-- Skip the industry→category rename if already done
+-- ALTER TABLE leads RENAME COLUMN industry TO category;
 
--- Drop the broken bids table entirely
+-- Only run these if not already applied:
+DO $$ BEGIN
+  ALTER TABLE leads ADD COLUMN IF NOT EXISTS applications integer DEFAULT 0;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE leads ADD COLUMN IF NOT EXISTS score integer DEFAULT 0;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Fix bids table (drop broken + recreate)
 DROP TABLE IF EXISTS public.bids CASCADE;
 
--- Recreate with correct schema
 CREATE TABLE IF NOT EXISTS public.bids (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project TEXT NOT NULL,
@@ -16,15 +26,13 @@ CREATE TABLE IF NOT EXISTS public.bids (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Grants
 GRANT ALL ON public.bids TO service_role;
 GRANT ALL ON public.bids TO authenticated;
 
--- Indexes
 CREATE INDEX IF NOT EXISTS idx_bids_phase ON public.bids(phase);
 CREATE INDEX IF NOT EXISTS idx_bids_created_at ON public.bids(created_at DESC);
 
--- Fix campaigns table if needed (drop and recreate to be safe)
+-- Fix campaigns table (drop and recreate to be safe)
 DROP TABLE IF EXISTS public.campaigns CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.campaigns (

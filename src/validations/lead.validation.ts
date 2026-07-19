@@ -7,8 +7,8 @@ export const createLeadSchema = z.object({
   job_title: z.string().optional(),
   phone: z.string().optional(),
   category: z.string().optional(),
-  applications: z.number().min(0).default(0),
-  score: z.number().min(0).max(100).default(0),
+  applications: z.coerce.number().min(0).default(0),
+  score: z.coerce.number().min(0).max(100).default(0),
 });
 
 export const updateLeadSchema = z.object({
@@ -18,8 +18,8 @@ export const updateLeadSchema = z.object({
   job_title: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
-  applications: z.number().min(0).optional(),
-  score: z.number().min(0).max(100).optional(),
+  applications: z.coerce.number().min(0).optional(),
+  score: z.coerce.number().min(0).max(100).optional(),
   status: z.enum(["new", "contacted", "qualified", "lost", "won"]).optional(),
 });
 

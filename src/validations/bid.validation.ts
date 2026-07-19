@@ -6,7 +6,7 @@ export const createBidSchema = z.object({
   phase: z.enum(["RFP Review", "Technical Eval", "Shortlist"]),
   deadline: z.string().min(1, "Deadline is required"),
   suppliers: z.array(z.string()).default([]),
-  value: z.number().nullable().optional(),
+  value: z.coerce.number().nullable().optional(),
 });
 
 export const updateBidSchema = z.object({
@@ -15,7 +15,7 @@ export const updateBidSchema = z.object({
   phase: z.enum(["RFP Review", "Technical Eval", "Shortlist"]).optional(),
   deadline: z.string().min(1).optional(),
   suppliers: z.array(z.string()).optional(),
-  value: z.number().nullable().optional(),
+  value: z.coerce.number().nullable().optional(),
 });
 
 export type CreateBidInput = z.infer<typeof createBidSchema>;
