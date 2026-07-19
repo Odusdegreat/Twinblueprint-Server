@@ -2,8 +2,9 @@
   "openapi": "3.0.3",
   "info": {
     "title": "TwinBlueprint Server API",
-    "description": "REST API for TwinBlueprint — leads, companies, notifications, bids, projects, campaigns, analytics, and auth.",
-    "version": "2.1.0"
+    "description": "REST API for TwinBlueprint — leads, companies, notifications, bids, projects, campaigns, analytics, and admin auth.",
+    "version": "3.0.0",
+    "contact": { "name": "TwinBlueprint", "email": "twinblueprints@gmail.com" }
   },
   "servers": [
     { "url": "http://localhost:5000", "description": "Development" }
@@ -14,10 +15,10 @@
     { "name": "Leads", "description": "Lead management CRUD + assignment" },
     { "name": "Companies", "description": "Company management CRUD" },
     { "name": "Notifications", "description": "User notifications" },
-    { "name": "Bids", "description": "Active bid management" },
-    { "name": "Projects", "description": "Inflight project tracking" },
-    { "name": "Campaigns", "description": "Outreach campaign management" },
-    { "name": "Analytics", "description": "Analytics, KPIs, and funnel data" },
+    { "name": "Bids", "description": "Active bid management (admin CRUD)" },
+    { "name": "Projects", "description": "Inflight project tracking (admin CRUD)" },
+    { "name": "Campaigns", "description": "Outreach campaign management + stats (admin CRUD)" },
+    { "name": "Analytics", "description": "Weekly trends, conversion funnel, and KPIs" },
     { "name": "Demo", "description": "Public demo request submission" }
   ],
   "components": {
@@ -26,14 +27,14 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT token via Authorization header or cookie named 'token'"
+        "description": "JWT token. Can also be sent via cookie named 'token'."
       }
     },
     "schemas": {
       "SafeUser": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
+          "id": { "type": "integer", "description": "Auto-increment bigint" },
           "username": { "type": "string" },
           "full_name": { "type": "string" },
           "email": { "type": "string", "format": "email" },
@@ -65,7 +66,7 @@
           "applications": { "type": "integer" },
           "score": { "type": "integer" },
           "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost", "won"] },
-          "assigned_to": { "type": "integer", "nullable": true },
+          "assigned_to": { "type": "integer", "nullable": true, "description": "User ID (bigint) of assigned user" },
           "created_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" }
         },
@@ -80,8 +81,8 @@
           "job_title": { "type": "string", "example": "CTO" },
           "phone": { "type": "string", "example": "+1234567890" },
           "category": { "type": "string", "example": "Technology" },
-          "applications": { "type": "integer", "example": 3 },
-          "score": { "type": "integer", "minimum": 0, "maximum": 100, "example": 75 }
+          "applications": { "type": "integer", "minimum": 0, "default": 0, "example": 3 },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100, "default": 0, "example": 75 }
         },
         "required": ["full_name", "email"]
       },
@@ -94,7 +95,7 @@
           "job_title": { "type": "string", "nullable": true },
           "phone": { "type": "string", "nullable": true },
           "category": { "type": "string", "nullable": true },
-          "applications": { "type": "integer" },
+          "applications": { "type": "integer", "minimum": 0 },
           "score": { "type": "integer", "minimum": 0, "maximum": 100 },
           "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost", "won"] }
         }
@@ -102,7 +103,7 @@
       "AssignLeadInput": {
         "type": "object",
         "properties": {
-          "assigned_to": { "type": "integer", "description": "User ID to assign the lead to" }
+          "assigned_to": { "type": "string", "description": "User ID to assign the lead to" }
         },
         "required": ["assigned_to"]
       },
@@ -148,7 +149,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "user_id": { "type": "integer" },
+          "user_id": { "type": "integer", "description": "User ID (bigint)" },
           "title": { "type": "string" },
           "message": { "type": "string" },
           "is_read": { "type": "boolean" },
@@ -159,32 +160,11 @@
       "CreateNotificationInput": {
         "type": "object",
         "properties": {
-          "user_id": { "type": "integer", "description": "Target user ID" },
+          "user_id": { "type": "string", "description": "Target user ID" },
           "title": { "type": "string", "minLength": 1, "example": "New lead assigned" },
           "message": { "type": "string", "minLength": 1, "example": "You have a new lead to follow up on." }
         },
         "required": ["user_id", "title", "message"]
-      },
-      "DemoRequest": {
-        "type": "object",
-        "properties": {
-          "fullName": { "type": "string", "minLength": 2, "example": "John Doe" },
-          "workEmail": { "type": "string", "format": "email", "example": "john@company.com" },
-          "company": { "type": "string", "example": "Acme Inc." },
-          "jobTitle": { "type": "string", "example": "CTO" },
-          "phone": { "type": "string", "example": "+1234567890" },
-          "category": { "type": "string", "example": "Technology" }
-        },
-        "required": ["fullName", "workEmail"]
-      },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "example": false },
-          "message": { "type": "string" },
-          "stack": { "type": "string", "description": "Only included in development" }
-        },
-        "required": ["success", "message"]
       },
       "Bid": {
         "type": "object",
@@ -193,7 +173,7 @@
           "project": { "type": "string" },
           "client": { "type": "string" },
           "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
-          "deadline": { "type": "string" },
+          "deadline": { "type": "string", "description": "Date string (YYYY-MM-DD)" },
           "suppliers": { "type": "array", "items": { "type": "string" } },
           "value": { "type": "number", "nullable": true },
           "created_at": { "type": "string", "format": "date-time" }
@@ -207,8 +187,8 @@
           "client": { "type": "string", "example": "Related Companies" },
           "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
           "deadline": { "type": "string", "example": "2026-05-15" },
-          "suppliers": { "type": "array", "items": { "type": "string" }, "example": ["Turner", "Skanska"] },
-          "value": { "type": "number", "example": 420000000 }
+          "suppliers": { "type": "array", "items": { "type": "string" }, "default": [], "example": ["Turner", "Skanska"] },
+          "value": { "type": "number", "nullable": true, "example": 420000000 }
         },
         "required": ["project", "client", "phase", "deadline"]
       },
@@ -229,8 +209,8 @@
           "id": { "type": "string", "format": "uuid" },
           "project": { "type": "string" },
           "client": { "type": "string" },
-          "start_date": { "type": "string" },
-          "end_date": { "type": "string" },
+          "start_date": { "type": "string", "description": "Date string (YYYY-MM-DD)" },
+          "end_date": { "type": "string", "description": "Date string (YYYY-MM-DD)" },
           "progress": { "type": "integer" },
           "suppliers": { "type": "array", "items": { "type": "string" } },
           "uses_3d": { "type": "boolean" },
@@ -247,9 +227,9 @@
           "client": { "type": "string", "example": "MDM Group" },
           "start_date": { "type": "string", "example": "2024-03-01" },
           "end_date": { "type": "string", "example": "2027-08-01" },
-          "progress": { "type": "integer", "minimum": 0, "maximum": 100, "example": 42 },
-          "suppliers": { "type": "array", "items": { "type": "string" }, "example": ["Suffolk", "Moss"] },
-          "uses_3d": { "type": "boolean", "example": true },
+          "progress": { "type": "integer", "minimum": 0, "maximum": 100, "default": 0, "example": 42 },
+          "suppliers": { "type": "array", "items": { "type": "string" }, "default": [], "example": ["Suffolk", "Moss"] },
+          "uses_3d": { "type": "boolean", "default": false, "example": true },
           "competitor": { "type": "string", "nullable": true, "example": "Enscape" },
           "issue": { "type": "string", "nullable": true, "example": "Clash detection delays" }
         },
@@ -279,7 +259,7 @@
           "opened": { "type": "integer" },
           "clicked": { "type": "integer" },
           "status": { "type": "string", "enum": ["Completed", "Active"] },
-          "campaign_date": { "type": "string" },
+          "campaign_date": { "type": "string", "description": "Date string (YYYY-MM-DD)" },
           "created_at": { "type": "string", "format": "date-time" }
         },
         "required": ["id", "name", "type", "sent", "opened", "clicked", "status", "campaign_date", "created_at"]
@@ -289,10 +269,10 @@
         "properties": {
           "name": { "type": "string", "example": "C-Suite LinkedIn Wave 1" },
           "type": { "type": "string", "enum": ["LinkedIn", "Email"] },
-          "sent": { "type": "integer", "example": 245 },
-          "opened": { "type": "integer", "example": 187 },
-          "clicked": { "type": "integer", "example": 63 },
-          "status": { "type": "string", "enum": ["Completed", "Active"] },
+          "sent": { "type": "integer", "minimum": 0, "default": 0, "example": 245 },
+          "opened": { "type": "integer", "minimum": 0, "default": 0, "example": 187 },
+          "clicked": { "type": "integer", "minimum": 0, "default": 0, "example": 63 },
+          "status": { "type": "string", "enum": ["Completed", "Active"], "default": "Active" },
           "campaign_date": { "type": "string", "example": "2026-03-15" }
         },
         "required": ["name", "type", "campaign_date"]
@@ -302,9 +282,9 @@
         "properties": {
           "name": { "type": "string" },
           "type": { "type": "string", "enum": ["LinkedIn", "Email"] },
-          "sent": { "type": "integer" },
-          "opened": { "type": "integer" },
-          "clicked": { "type": "integer" },
+          "sent": { "type": "integer", "minimum": 0 },
+          "opened": { "type": "integer", "minimum": 0 },
+          "clicked": { "type": "integer", "minimum": 0 },
           "status": { "type": "string", "enum": ["Completed", "Active"] },
           "campaign_date": { "type": "string" }
         }
@@ -315,8 +295,38 @@
           "total_sent": { "type": "integer" },
           "total_opens": { "type": "integer" },
           "total_clicks": { "type": "integer" },
-          "avg_ctr": { "type": "number" }
+          "avg_ctr": { "type": "number", "description": "Click-through rate (%)" }
         }
+      },
+      "DemoRequest": {
+        "type": "object",
+        "properties": {
+          "fullName": { "type": "string", "minLength": 2, "example": "John Doe" },
+          "workEmail": { "type": "string", "format": "email", "example": "john@company.com" },
+          "company": { "type": "string", "example": "Acme Inc." },
+          "jobTitle": { "type": "string", "example": "CTO" },
+          "phone": { "type": "string", "example": "+1234567890" },
+          "category": { "type": "string", "example": "Technology" }
+        },
+        "required": ["fullName", "workEmail"]
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "total": { "type": "integer" },
+          "pages": { "type": "integer" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "stack": { "type": "string", "description": "Only included in development" }
+        },
+        "required": ["success", "message"]
       }
     }
   },
@@ -352,19 +362,16 @@
         }
       }
     },
+
     "/api/auth/login": {
       "post": {
         "tags": ["Auth"],
         "summary": "Admin login",
-        "description": "Authenticates an admin user by username and password. Returns the user and a JWT token. Non-admin users are rejected.",
+        "description": "Authenticates an admin user by username and password. Returns the user and a JWT token. Non-admin users are rejected. Rate limited to 10 attempts per 15 minutes.",
         "security": [],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/LoginInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginInput" } } }
         },
         "responses": {
           "200": {
@@ -391,8 +398,7 @@
           "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "401": { "description": "Invalid username or password", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "403": { "description": "Access denied — admin only or account deactivated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "429": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "429": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -422,8 +428,7 @@
               }
             }
           },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "404": { "description": "User not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -452,19 +457,16 @@
         }
       }
     },
+
     "/api/leads": {
       "post": {
         "tags": ["Leads"],
         "summary": "Create a lead",
-        "description": "Creates a new lead. Status defaults to 'new'.",
+        "description": "Creates a new lead. Status defaults to 'new'. Triggers an async email notification.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateLeadInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateLeadInput" } } }
         },
         "responses": {
           "201": {
@@ -478,9 +480,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "lead": { "$ref": "#/components/schemas/Lead" }
-                      }
+                      "properties": { "lead": { "$ref": "#/components/schemas/Lead" } }
                     }
                   }
                 }
@@ -488,8 +488,7 @@
             }
           },
           "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "get": {
@@ -513,19 +512,8 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "leads": {
-                          "type": "array",
-                          "items": { "$ref": "#/components/schemas/Lead" }
-                        },
-                        "pagination": {
-                          "type": "object",
-                          "properties": {
-                            "page": { "type": "integer" },
-                            "limit": { "type": "integer" },
-                            "total": { "type": "integer" },
-                            "pages": { "type": "integer" }
-                          }
-                        }
+                        "leads": { "type": "array", "items": { "$ref": "#/components/schemas/Lead" } },
+                        "pagination": { "$ref": "#/components/schemas/Pagination" }
                       }
                     }
                   }
@@ -556,9 +544,7 @@
                     "success": { "type": "boolean", "example": true },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "lead": { "$ref": "#/components/schemas/Lead" }
-                      }
+                      "properties": { "lead": { "$ref": "#/components/schemas/Lead" } }
                     }
                   }
                 }
@@ -578,11 +564,7 @@
         ],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateLeadInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateLeadInput" } } }
         },
         "responses": {
           "200": {
@@ -596,9 +578,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "lead": { "$ref": "#/components/schemas/Lead" }
-                      }
+                      "properties": { "lead": { "$ref": "#/components/schemas/Lead" } }
                     }
                   }
                 }
@@ -648,11 +628,7 @@
         ],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/AssignLeadInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignLeadInput" } } }
         },
         "responses": {
           "200": {
@@ -666,9 +642,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "lead": { "$ref": "#/components/schemas/Lead" }
-                      }
+                      "properties": { "lead": { "$ref": "#/components/schemas/Lead" } }
                     }
                   }
                 }
@@ -681,6 +655,7 @@
         }
       }
     },
+
     "/api/companies": {
       "post": {
         "tags": ["Companies"],
@@ -688,11 +663,7 @@
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateCompanyInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCompanyInput" } } }
         },
         "responses": {
           "201": {
@@ -706,9 +677,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "company": { "$ref": "#/components/schemas/Company" }
-                      }
+                      "properties": { "company": { "$ref": "#/components/schemas/Company" } }
                     }
                   }
                 }
@@ -716,8 +685,7 @@
             }
           },
           "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "get": {
@@ -741,19 +709,8 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "companies": {
-                          "type": "array",
-                          "items": { "$ref": "#/components/schemas/Company" }
-                        },
-                        "pagination": {
-                          "type": "object",
-                          "properties": {
-                            "page": { "type": "integer" },
-                            "limit": { "type": "integer" },
-                            "total": { "type": "integer" },
-                            "pages": { "type": "integer" }
-                          }
-                        }
+                        "companies": { "type": "array", "items": { "$ref": "#/components/schemas/Company" } },
+                        "pagination": { "$ref": "#/components/schemas/Pagination" }
                       }
                     }
                   }
@@ -784,9 +741,7 @@
                     "success": { "type": "boolean", "example": true },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "company": { "$ref": "#/components/schemas/Company" }
-                      }
+                      "properties": { "company": { "$ref": "#/components/schemas/Company" } }
                     }
                   }
                 }
@@ -806,11 +761,7 @@
         ],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateCompanyInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCompanyInput" } } }
         },
         "responses": {
           "200": {
@@ -824,9 +775,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "company": { "$ref": "#/components/schemas/Company" }
-                      }
+                      "properties": { "company": { "$ref": "#/components/schemas/Company" } }
                     }
                   }
                 }
@@ -866,6 +815,7 @@
         }
       }
     },
+
     "/api/notifications": {
       "post": {
         "tags": ["Notifications"],
@@ -874,11 +824,7 @@
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateNotificationInput" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateNotificationInput" } } }
         },
         "responses": {
           "201": {
@@ -892,9 +838,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "notification": { "$ref": "#/components/schemas/Notification" }
-                      }
+                      "properties": { "notification": { "$ref": "#/components/schemas/Notification" } }
                     }
                   }
                 }
@@ -909,7 +853,7 @@
       "get": {
         "tags": ["Notifications"],
         "summary": "Get current user's notifications",
-        "description": "Returns notifications for the authenticated user, newest first. Supports pagination.",
+        "description": "Returns notifications for the authenticated user only, newest first. Supports pagination.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
@@ -927,19 +871,8 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "notifications": {
-                          "type": "array",
-                          "items": { "$ref": "#/components/schemas/Notification" }
-                        },
-                        "pagination": {
-                          "type": "object",
-                          "properties": {
-                            "page": { "type": "integer" },
-                            "limit": { "type": "integer" },
-                            "total": { "type": "integer" },
-                            "pages": { "type": "integer" }
-                          }
-                        }
+                        "notifications": { "type": "array", "items": { "$ref": "#/components/schemas/Notification" } },
+                        "pagination": { "$ref": "#/components/schemas/Pagination" }
                       }
                     }
                   }
@@ -955,6 +888,7 @@
       "patch": {
         "tags": ["Notifications"],
         "summary": "Mark notification as read",
+        "description": "Ownership check: only the notification owner can mark it as read.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -971,9 +905,7 @@
                     "message": { "type": "string" },
                     "data": {
                       "type": "object",
-                      "properties": {
-                        "notification": { "$ref": "#/components/schemas/Notification" }
-                      }
+                      "properties": { "notification": { "$ref": "#/components/schemas/Notification" } }
                     }
                   }
                 }
@@ -989,6 +921,7 @@
       "delete": {
         "tags": ["Notifications"],
         "summary": "Delete a notification",
+        "description": "Ownership check: only the notification owner can delete it.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -1012,23 +945,20 @@
         }
       }
     },
-    "/api/demo": {
+
+    "/api/bids": {
       "post": {
-        "tags": ["Demo"],
-        "summary": "Submit a demo request",
-        "description": "Public endpoint. Rate limited to 5 requests per hour per IP.",
-        "security": [],
+        "tags": ["Bids"],
+        "summary": "Create a bid",
+        "description": "Admin only.",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/DemoRequest" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateBidInput" } } }
         },
         "responses": {
           "201": {
-            "description": "Demo request submitted successfully",
+            "description": "Bid created",
             "content": {
               "application/json": {
                 "schema": {
@@ -1036,27 +966,28 @@
                   "properties": {
                     "success": { "type": "boolean", "example": true },
                     "message": { "type": "string" },
-                    "data": { "type": "object" }
+                    "data": {
+                      "type": "object",
+                      "properties": { "bid": { "$ref": "#/components/schemas/Bid" } }
+                    }
                   }
                 }
               }
             }
           },
           "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "409": { "description": "Duplicate lead", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "429": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
-      }
-    },
-    "/api/bids": {
+      },
       "get": {
         "tags": ["Bids"],
         "summary": "List all bids",
         "description": "Supports pagination.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
         ],
         "responses": {
           "200": {
@@ -1071,30 +1002,15 @@
                       "type": "object",
                       "properties": {
                         "bids": { "type": "array", "items": { "$ref": "#/components/schemas/Bid" } },
-                        "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "pages": { "type": "integer" } } }
+                        "pagination": { "$ref": "#/components/schemas/Pagination" }
                       }
                     }
                   }
                 }
               }
             }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Bids"],
-        "summary": "Create a bid",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateBidInput" } } }
-        },
-        "responses": {
-          "201": {
-            "description": "Bid created",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "bid": { "$ref": "#/components/schemas/Bid" } } } } } } }
           },
-          "400": { "description": "Validation failed" }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -1103,44 +1019,139 @@
         "tags": ["Bids"],
         "summary": "Get bid by ID",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
         "responses": {
-          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "bid": { "$ref": "#/components/schemas/Bid" } } } } } } } },
-          "404": { "description": "Bid not found" }
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": { "bid": { "$ref": "#/components/schemas/Bid" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Bid not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "patch": {
         "tags": ["Bids"],
         "summary": "Update a bid",
+        "description": "Admin only.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateBidInput" } } } },
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateBidInput" } } }
+        },
         "responses": {
-          "200": { "description": "Bid updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "bid": { "$ref": "#/components/schemas/Bid" } } } } } } } },
-          "400": { "description": "Validation failed" },
-          "404": { "description": "Bid not found" }
+          "200": {
+            "description": "Bid updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": { "bid": { "$ref": "#/components/schemas/Bid" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Bid not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "delete": {
         "tags": ["Bids"],
         "summary": "Delete a bid",
+        "description": "Admin only.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
         "responses": {
-          "200": { "description": "Bid deleted" },
-          "403": { "description": "Admin only" }
+          "200": {
+            "description": "Bid deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
+
     "/api/projects": {
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Create a project",
+        "description": "Admin only.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateProjectInput" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": { "project": { "$ref": "#/components/schemas/Project" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
       "get": {
         "tags": ["Projects"],
         "summary": "List all projects",
         "description": "Supports pagination.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
         ],
         "responses": {
           "200": {
@@ -1155,30 +1166,15 @@
                       "type": "object",
                       "properties": {
                         "projects": { "type": "array", "items": { "$ref": "#/components/schemas/Project" } },
-                        "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "pages": { "type": "integer" } } }
+                        "pagination": { "$ref": "#/components/schemas/Pagination" }
                       }
                     }
                   }
                 }
               }
             }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Projects"],
-        "summary": "Create a project",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateProjectInput" } } }
-        },
-        "responses": {
-          "201": {
-            "description": "Project created",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "project": { "$ref": "#/components/schemas/Project" } } } } } } }
           },
-          "400": { "description": "Validation failed" }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -1187,44 +1183,164 @@
         "tags": ["Projects"],
         "summary": "Get project by ID",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
         "responses": {
-          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "project": { "$ref": "#/components/schemas/Project" } } } } } } } },
-          "404": { "description": "Project not found" }
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": { "project": { "$ref": "#/components/schemas/Project" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Project not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "patch": {
         "tags": ["Projects"],
         "summary": "Update a project",
+        "description": "Admin only.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProjectInput" } } } },
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProjectInput" } } }
+        },
         "responses": {
-          "200": { "description": "Project updated" },
-          "400": { "description": "Validation failed" },
-          "404": { "description": "Project not found" }
+          "200": {
+            "description": "Project updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": { "project": { "$ref": "#/components/schemas/Project" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Project not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "delete": {
         "tags": ["Projects"],
         "summary": "Delete a project",
+        "description": "Admin only.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
         "responses": {
-          "200": { "description": "Project deleted" },
-          "403": { "description": "Admin only" }
+          "200": {
+            "description": "Project deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/api/campaigns/stats": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "Get campaign summary stats",
+        "description": "Returns total sent, opens, clicks, and average CTR across all campaigns.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/CampaignStats" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
     "/api/campaigns": {
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "Create a campaign",
+        "description": "Admin only.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCampaignInput" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Campaign created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
       "get": {
         "tags": ["Campaigns"],
         "summary": "List all campaigns",
         "description": "Supports pagination.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 } }
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
         ],
         "responses": {
           "200": {
@@ -1239,44 +1355,15 @@
                       "type": "object",
                       "properties": {
                         "campaigns": { "type": "array", "items": { "$ref": "#/components/schemas/Campaign" } },
-                        "pagination": { "type": "object", "properties": { "page": { "type": "integer" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "pages": { "type": "integer" } } }
+                        "pagination": { "$ref": "#/components/schemas/Pagination" }
                       }
                     }
                   }
                 }
               }
             }
-          }
-        }
-      },
-      "post": {
-        "tags": ["Campaigns"],
-        "summary": "Create a campaign",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCampaignInput" } } }
-        },
-        "responses": {
-          "201": {
-            "description": "Campaign created",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "data": { "type": "object", "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } } } } } } }
           },
-          "400": { "description": "Validation failed" }
-        }
-      }
-    },
-    "/api/campaigns/stats": {
-      "get": {
-        "tags": ["Campaigns"],
-        "summary": "Get campaign summary stats",
-        "description": "Returns total sent, opens, clicks, and average CTR across all campaigns.",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/CampaignStats" } } } } }
-          }
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -1285,39 +1372,102 @@
         "tags": ["Campaigns"],
         "summary": "Get campaign by ID",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
         "responses": {
-          "200": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "object", "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } } } } } } } },
-          "404": { "description": "Campaign not found" }
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Campaign not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "patch": {
         "tags": ["Campaigns"],
         "summary": "Update a campaign",
+        "description": "Admin only.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCampaignInput" } } } },
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCampaignInput" } } }
+        },
         "responses": {
-          "200": { "description": "Campaign updated" },
-          "400": { "description": "Validation failed" },
-          "404": { "description": "Campaign not found" }
+          "200": {
+            "description": "Campaign updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": { "campaign": { "$ref": "#/components/schemas/Campaign" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Campaign not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       },
       "delete": {
         "tags": ["Campaigns"],
         "summary": "Delete a campaign",
+        "description": "Admin only.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
         "responses": {
-          "200": { "description": "Campaign deleted" },
-          "403": { "description": "Admin only" }
+          "200": {
+            "description": "Campaign deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
+
     "/api/analytics/weekly": {
       "get": {
         "tags": ["Analytics"],
         "summary": "Get weekly trend data",
+        "description": "Returns lead creation and campaign engagement broken down by week.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "weeks", "in": "query", "schema": { "type": "integer", "default": 8, "minimum": 1, "maximum": 52 } }
@@ -1330,7 +1480,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": { "type": "boolean" },
+                    "success": { "type": "boolean", "example": true },
                     "data": {
                       "type": "object",
                       "properties": {
@@ -1339,7 +1489,7 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "week": { "type": "string" },
+                              "week": { "type": "string", "example": "W1" },
                               "leads": { "type": "integer" },
                               "emails": { "type": "integer" },
                               "opens": { "type": "integer" },
@@ -1353,7 +1503,8 @@
                 }
               }
             }
-          }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -1361,6 +1512,7 @@
       "get": {
         "tags": ["Analytics"],
         "summary": "Get conversion funnel",
+        "description": "Returns lead progression stages with counts and percentages.",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
@@ -1370,7 +1522,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": { "type": "boolean" },
+                    "success": { "type": "boolean", "example": true },
                     "data": {
                       "type": "object",
                       "properties": {
@@ -1379,9 +1531,9 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "stage": { "type": "string" },
+                              "stage": { "type": "string", "example": "Identified" },
                               "count": { "type": "integer" },
-                              "pct": { "type": "integer" }
+                              "pct": { "type": "integer", "description": "Percentage of total" }
                             }
                           }
                         }
@@ -1391,7 +1543,8 @@
                 }
               }
             }
-          }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -1399,6 +1552,7 @@
       "get": {
         "tags": ["Analytics"],
         "summary": "Get KPI summary",
+        "description": "Returns key performance indicators: lead growth, qualified rate, email open rate, click-through rate.",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
@@ -1408,21 +1562,54 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": { "type": "boolean" },
+                    "success": { "type": "boolean", "example": true },
                     "data": {
                       "type": "object",
                       "properties": {
                         "lead_growth": { "type": "string", "example": "+147%" },
-                        "qualified_rate": { "type": "number" },
-                        "email_open_rate": { "type": "number" },
-                        "click_through": { "type": "number" }
+                        "qualified_rate": { "type": "number", "description": "Percentage" },
+                        "email_open_rate": { "type": "number", "description": "Percentage" },
+                        "click_through": { "type": "number", "description": "Percentage" }
                       }
                     }
                   }
                 }
               }
             }
-          }
+          },
+          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/api/demo": {
+      "post": {
+        "tags": ["Demo"],
+        "summary": "Submit a demo request",
+        "description": "Public endpoint. Rate limited to 5 requests per hour per IP. Creates a lead record and triggers email notification.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DemoRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Demo request submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/Lead" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     }
