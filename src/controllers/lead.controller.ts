@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as leadService from "../services/lead.service.ts";
 import { emailService } from "../services/email.service.ts";
+import { env } from "../config/env.config.ts";
 
 const getId = (req: Request): string => req.params.id as string;
 
@@ -9,10 +10,14 @@ export const createLead = async (req: Request, res: Response) => {
 
   emailService
     .sendLeadNotification({
-      to: "twinblueprints@gmail.com",
-      leadName: lead.full_name,
-      leadEmail: lead.email,
+      to: env.NOTIFICATION_EMAIL,
+      fullName: lead.full_name,
+      email: lead.email,
       company: lead.company ?? undefined,
+      jobTitle: lead.job_title ?? undefined,
+      phone: lead.phone ?? undefined,
+      category: lead.category ?? undefined,
+      dateSubmitted: new Date(lead.created_at),
     })
     .catch((err) => console.error("[LEAD] Email notification failed:", err));
 

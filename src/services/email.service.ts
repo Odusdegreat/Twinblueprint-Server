@@ -66,23 +66,61 @@ class EmailService {
 
   async sendLeadNotification(params: {
     to: string;
-    leadName: string;
-    leadEmail: string;
+    fullName: string;
+    email: string;
     company?: string;
+    jobTitle?: string;
+    phone?: string;
+    category?: string;
+    dateSubmitted?: Date;
   }): Promise<EmailResponse> {
+    const dateStr = params.dateSubmitted
+      ? new Date(params.dateSubmitted).toLocaleString("en-US", {
+          dateStyle: "full",
+          timeStyle: "short",
+        })
+      : new Date().toLocaleString("en-US", {
+          dateStyle: "full",
+          timeStyle: "short",
+        });
+
     const html = `
-      <h2>New Lead Notification</h2>
-      <p>A new lead has been submitted.</p>
-      <ul>
-        <li><strong>Name:</strong> ${params.leadName}</li>
-        <li><strong>Email:</strong> ${params.leadEmail}</li>
-        ${params.company ? `<li><strong>Company:</strong> ${params.company}</li>` : ""}
-      </ul>
+      <h2>New Lead Submitted</h2>
+      <p>A new lead has been submitted through the TwinBlueprint website.</p>
+      <table>
+        <tr>
+          <td><strong>Name:</strong></td>
+          <td>${params.fullName}</td>
+        </tr>
+        <tr>
+          <td><strong>Email:</strong></td>
+          <td>${params.email}</td>
+        </tr>
+        ${params.company ? `<tr><td><strong>Company:</strong></td><td>${params.company}</td></tr>` : ""}
+        ${params.jobTitle ? `<tr><td><strong>Job Title:</strong></td><td>${params.jobTitle}</td></tr>` : ""}
+        ${params.phone ? `<tr><td><strong>Phone:</strong></td><td>${params.phone}</td></tr>` : ""}
+        ${params.category ? `<tr><td><strong>Industry:</strong></td><td>${params.category}</td></tr>` : ""}
+      </table>
+      <br>
+      <a
+        href="https://crm.twinblueprint.com/login"
+        style="
+          display:inline-block;
+          padding:14px 28px;
+          background:#2563eb;
+          color:#ffffff;
+          text-decoration:none;
+          border-radius:8px;
+          font-weight:600;
+        "
+      >
+        View Lead in CRM
+      </a>
     `;
 
     return this.sendEmail({
       to: params.to,
-      subject: `New Lead: ${params.leadName}`,
+      subject: `New Lead: ${params.fullName}`,
       html,
     });
   }

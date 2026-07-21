@@ -26,4 +26,5 @@ export const env = {
   // Resend
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   FROM_EMAIL: requiredEnv("FROM_EMAIL"),
+  NOTIFICATION_EMAIL: process.env.NOTIFICATION_EMAIL || "twinblueprints@gmail.com",
 };
