@@ -17,6 +17,7 @@ import leadRoutes from "./routes/lead.routes.ts";
 import notificationRoutes from "./routes/notification.routes.ts";
 import projectRoutes from "./routes/project.routes.ts";
 import { errorHandler } from "./middleware/errorHandler.ts";
+import { INDUSTRIES } from "./config/industries.ts";
 import {
   requestId,
   removePoweredBy,
@@ -107,6 +108,14 @@ app.get("/api/health", (_req, res) => {
     success: true,
     message: "OK",
     data: { uptime: process.uptime(), timestamp: new Date().toISOString() },
+  });
+});
+
+// Industries list (no auth required)
+app.get("/api/industries", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    data: { industries: [...INDUSTRIES] },
   });
 });
 

@@ -11,6 +11,7 @@
   ],
   "tags": [
     { "name": "Health", "description": "Health check" },
+    { "name": "Industries", "description": "Industry category list" },
     { "name": "Auth", "description": "Admin login, current user, logout" },
     { "name": "Leads", "description": "Lead management CRUD + assignment" },
     { "name": "Companies", "description": "Company management CRUD" },
@@ -31,6 +32,36 @@
       }
     },
     "schemas": {
+      "Category": {
+        "type": "string",
+        "enum": [
+          "Construction",
+          "Architecture",
+          "Urban Development",
+          "Infrastructure",
+          "Real Estate",
+          "Banking & Finance",
+          "Insurance",
+          "Healthcare",
+          "Education",
+          "Manufacturing",
+          "Energy & Utilities",
+          "Transportation & Logistics",
+          "Telecommunications",
+          "Government & Public Sector",
+          "Retail & Consumer Goods",
+          "Hospitality & Tourism",
+          "Legal & Compliance",
+          "IT & Software",
+          "Media & Entertainment",
+          "Agriculture & Farming",
+          "Mining & Natural Resources",
+          "Aerospace & Defense",
+          "Automotive",
+          "Food & Beverage",
+          "Environmental Services"
+        ]
+      },
       "SafeUser": {
         "type": "object",
         "properties": {
@@ -62,7 +93,7 @@
           "company": { "type": "string", "nullable": true },
           "job_title": { "type": "string", "nullable": true },
           "phone": { "type": "string", "nullable": true },
-          "category": { "type": "string", "nullable": true },
+          "category": { "$ref": "#/components/schemas/Category", "nullable": true },
           "applications": { "type": "integer" },
           "score": { "type": "integer" },
           "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost", "won"] },
@@ -80,7 +111,7 @@
           "company": { "type": "string", "example": "Acme Inc." },
           "job_title": { "type": "string", "example": "CTO" },
           "phone": { "type": "string", "example": "+1234567890" },
-          "category": { "type": "string", "example": "Technology" },
+          "category": { "$ref": "#/components/schemas/Category", "example": "Construction" },
           "applications": { "type": "integer", "minimum": 0, "default": 0, "example": 3 },
           "score": { "type": "integer", "minimum": 0, "maximum": 100, "default": 0, "example": 75 }
         },
@@ -306,7 +337,7 @@
           "company": { "type": "string", "example": "Acme Inc." },
           "jobTitle": { "type": "string", "example": "CTO" },
           "phone": { "type": "string", "example": "+1234567890" },
-          "category": { "type": "string", "example": "Technology" }
+          "category": { "$ref": "#/components/schemas/Category", "example": "Construction" }
         },
         "required": ["fullName", "workEmail"]
       },
@@ -331,6 +362,35 @@
     }
   },
   "paths": {
+    "/api/industries": {
+      "get": {
+        "tags": ["Industries"],
+        "summary": "List all industry categories",
+        "description": "Returns the predefined list of industry categories. No authentication required.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "industries": { "$ref": "#/components/schemas/Category" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": ["Health"],
