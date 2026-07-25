@@ -12,6 +12,7 @@ export const createBid = async (data: CreateBidInput): Promise<Bid> => {
       deadline: data.deadline,
       suppliers: data.suppliers,
       value: data.value ?? null,
+      lead_id: data.lead_id ?? null,
     })
     .select()
     .single();
@@ -74,6 +75,7 @@ export const updateBid = async (id: string, data: UpdateBidInput): Promise<Bid> 
   if (data.deadline !== undefined) updates.deadline = data.deadline;
   if (data.suppliers !== undefined) updates.suppliers = data.suppliers;
   if (data.value !== undefined) updates.value = data.value;
+  if (data.lead_id !== undefined) updates.lead_id = data.lead_id;
 
   if (Object.keys(updates).length === 0) {
     throw Object.assign(new Error("No fields to update"), { statusCode: 400 });

@@ -7,6 +7,7 @@ export const createBidSchema = z.object({
   deadline: z.string().min(1, "Deadline is required"),
   suppliers: z.array(z.string()).default([]),
   value: z.coerce.number().nullable().optional(),
+  lead_id: z.string().uuid().nullable().optional(),
 });
 
 export const updateBidSchema = z.object({
@@ -16,6 +17,7 @@ export const updateBidSchema = z.object({
   deadline: z.string().min(1).optional(),
   suppliers: z.array(z.string()).optional(),
   value: z.coerce.number().nullable().optional(),
+  lead_id: z.string().uuid().nullable().optional(),
 });
 
 export type CreateBidInput = z.infer<typeof createBidSchema>;

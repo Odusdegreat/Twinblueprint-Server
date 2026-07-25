@@ -15,6 +15,7 @@ export const createProject = async (data: CreateProjectInput): Promise<Project> 
       uses_3d: data.uses_3d,
       competitor: data.competitor ?? null,
       issue: data.issue ?? null,
+      bid_id: data.bid_id ?? null,
     })
     .select()
     .single();
@@ -80,6 +81,7 @@ export const updateProject = async (id: string, data: UpdateProjectInput): Promi
   if (data.uses_3d !== undefined) updates.uses_3d = data.uses_3d;
   if (data.competitor !== undefined) updates.competitor = data.competitor;
   if (data.issue !== undefined) updates.issue = data.issue;
+  if (data.bid_id !== undefined) updates.bid_id = data.bid_id;
 
   if (Object.keys(updates).length === 0) {
     throw Object.assign(new Error("No fields to update"), { statusCode: 400 });

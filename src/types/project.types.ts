@@ -9,5 +9,6 @@ export interface Project {
   uses_3d: boolean;
   competitor: string | null;
   issue: string | null;
+  bid_id: string | null;
   created_at: string;
 }

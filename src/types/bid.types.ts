@@ -8,5 +8,6 @@ export interface Bid {
   deadline: string;
   suppliers: string[];
   value: number | null;
+  lead_id: string | null;
   created_at: string;
 }

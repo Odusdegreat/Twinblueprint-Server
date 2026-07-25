@@ -15,7 +15,7 @@ REST API server for TwinBlueprint — a public website + CRM system. Built with 
 ## Features
 
 - **Public**: Demo request submission (`POST /api/demo`) — no auth required
-- **CRM** (admin-only): Leads, Companies, Notifications — full CRUD
+- **CRM** (admin-only): Leads, Bids, Projects, Campaigns — full CRUD
 - **Auth**: Admin login with JWT (username + password)
 - **Security**: Helmet, CORS, rate limiting, input sanitization, request IDs
 - **Email**: Lead notification emails via Resend
@@ -72,15 +72,6 @@ bun run start    # production
 | `PATCH` | `/api/leads/:id` | Yes | Update lead |
 | `DELETE` | `/api/leads/:id` | Admin | Delete lead |
 | `PATCH` | `/api/leads/:id/assign` | Yes | Assign lead |
-| `GET` | `/api/companies` | Yes | List companies (paginated) |
-| `POST` | `/api/companies` | Yes | Create company |
-| `GET` | `/api/companies/:id` | Yes | Get company |
-| `PATCH` | `/api/companies/:id` | Yes | Update company |
-| `DELETE` | `/api/companies/:id` | Admin | Delete company |
-| `GET` | `/api/notifications` | Yes | List notifications (paginated) |
-| `POST` | `/api/notifications` | Admin | Create notification |
-| `PATCH` | `/api/notifications/:id/read` | Yes | Mark as read |
-| `DELETE` | `/api/notifications/:id` | Yes | Delete notification |
 
 ### Pagination
 
@@ -108,10 +99,8 @@ src/
 │   └── cookies.ts            # Cookie config
 ├── controllers/
 │   ├── auth.controller.ts
-│   ├── company.controller.ts
 │   ├── demo.controller.ts
-│   ├── lead.controller.ts
-│   └── notification.controller.ts
+│   └── lead.controller.ts
 ├── middleware/
 │   ├── auth.ts               # JWT verification
 │   ├── authorize.ts          # Role-based access
@@ -120,27 +109,19 @@ src/
 │   └── validate.ts           # Zod validation
 ├── routes/
 │   ├── auth.routes.ts
-│   ├── company.routes.ts
 │   ├── demo.routes.ts
-│   ├── lead.routes.ts
-│   └── notification.routes.ts
+│   └── lead.routes.ts
 ├── services/
 │   ├── auth.service.ts
-│   ├── company.service.ts
 │   ├── demo.service.ts
 │   ├── email.service.ts
-│   ├── lead.service.ts
-│   └── notification.service.ts
+│   └── lead.service.ts
 ├── types/
 │   ├── auth.types.ts
-│   ├── company.types.ts
 │   ├── demo.types.ts
-│   ├── lead.types.ts
-│   └── notification.types.ts
+│   └── lead.types.ts
 └── validations/
     ├── auth.validation.ts
-    ├── company.validation.ts
     ├── demo.validation.ts
-    ├── lead.validation.ts
-    └── notification.validation.ts
+    └── lead.validation.ts
 ```

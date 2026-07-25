@@ -10,6 +10,7 @@ export const createProjectSchema = z.object({
   uses_3d: z.coerce.boolean().default(false),
   competitor: z.string().nullable().optional(),
   issue: z.string().nullable().optional(),
+  bid_id: z.string().uuid().nullable().optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -22,6 +23,7 @@ export const updateProjectSchema = z.object({
   uses_3d: z.coerce.boolean().optional(),
   competitor: z.string().nullable().optional(),
   issue: z.string().nullable().optional(),
+  bid_id: z.string().uuid().nullable().optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

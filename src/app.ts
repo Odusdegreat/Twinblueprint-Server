@@ -10,11 +10,10 @@ import openapiSpec from "../openapi.json" with { type: "json" };
 import authRoutes from "./routes/auth.routes.ts";
 import bidRoutes from "./routes/bid.routes.ts";
 import campaignRoutes from "./routes/campaign.routes.ts";
-import companyRoutes from "./routes/company.routes.ts";
 import analyticsRoutes from "./routes/analytics.routes.ts";
 import demoRoutes from "./routes/demo.routes.ts";
 import leadRoutes from "./routes/lead.routes.ts";
-import notificationRoutes from "./routes/notification.routes.ts";
+import pipelineRoutes from "./routes/pipeline.routes.ts";
 import projectRoutes from "./routes/project.routes.ts";
 import { errorHandler } from "./middleware/errorHandler.ts";
 import { INDUSTRIES } from "./config/industries.ts";
@@ -124,10 +123,9 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/bids", bidRoutes);
 app.use("/api/campaigns", campaignRoutes);
-app.use("/api/companies", companyRoutes);
 app.use("/api/demo", demoRoutes);
 app.use("/api/leads", leadRoutes);
-app.use("/api/notifications", notificationRoutes);
+app.use("/api/pipeline", pipelineRoutes);
 app.use("/api/projects", projectRoutes);
 
 // 404 handler

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "TwinBlueprint Server API",
-    "description": "REST API for TwinBlueprint — leads, companies, notifications, bids, projects, campaigns, analytics, and admin auth.",
+    "description": "REST API for TwinBlueprint — leads, bids, projects, campaigns, analytics, and admin auth.",
     "version": "3.0.0",
     "contact": { "name": "TwinBlueprint", "email": "twinblueprints@gmail.com" }
   },
@@ -14,12 +14,11 @@
     { "name": "Industries", "description": "Industry category list" },
     { "name": "Auth", "description": "Admin login, current user, logout" },
     { "name": "Leads", "description": "Lead management CRUD + assignment" },
-    { "name": "Companies", "description": "Company management CRUD" },
-    { "name": "Notifications", "description": "User notifications" },
     { "name": "Bids", "description": "Active bid management (admin CRUD)" },
     { "name": "Projects", "description": "Inflight project tracking (admin CRUD)" },
     { "name": "Campaigns", "description": "Outreach campaign management + stats (admin CRUD)" },
     { "name": "Analytics", "description": "Weekly trends, conversion funnel, and KPIs" },
+    { "name": "Pipeline", "description": "Aggregated pipeline view — active bids and inflight projects" },
     { "name": "Demo", "description": "Public demo request submission" }
   ],
   "components": {
@@ -35,31 +34,10 @@
       "Category": {
         "type": "string",
         "enum": [
-          "Construction",
           "Architecture",
           "Urban Development",
           "Infrastructure",
-          "Real Estate",
-          "Banking & Finance",
-          "Insurance",
-          "Healthcare",
-          "Education",
-          "Manufacturing",
-          "Energy & Utilities",
-          "Transportation & Logistics",
-          "Telecommunications",
-          "Government & Public Sector",
-          "Retail & Consumer Goods",
-          "Hospitality & Tourism",
-          "Legal & Compliance",
-          "IT & Software",
-          "Media & Entertainment",
-          "Agriculture & Farming",
-          "Mining & Natural Resources",
-          "Aerospace & Defense",
-          "Automotive",
-          "Food & Beverage",
-          "Environmental Services"
+          "Other"
         ]
       },
       "SafeUser": {
@@ -138,65 +116,6 @@
         },
         "required": ["assigned_to"]
       },
-      "Company": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "company_name": { "type": "string" },
-          "email": { "type": "string", "format": "email", "nullable": true },
-          "phone": { "type": "string", "nullable": true },
-          "website": { "type": "string", "format": "uri", "nullable": true },
-          "industry": { "type": "string", "nullable": true },
-          "address": { "type": "string", "nullable": true },
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated": { "type": "string", "format": "date-time" }
-        },
-        "required": ["id", "company_name", "created_at", "updated"]
-      },
-      "CreateCompanyInput": {
-        "type": "object",
-        "properties": {
-          "company_name": { "type": "string", "minLength": 1, "example": "Acme Inc." },
-          "email": { "type": "string", "format": "email", "example": "info@acme.com" },
-          "phone": { "type": "string", "example": "+1234567890" },
-          "website": { "type": "string", "format": "uri", "example": "https://acme.com" },
-          "industry": { "type": "string", "example": "Technology" },
-          "address": { "type": "string", "example": "123 Main St, City, Country" }
-        },
-        "required": ["company_name"]
-      },
-      "UpdateCompanyInput": {
-        "type": "object",
-        "properties": {
-          "company_name": { "type": "string", "minLength": 1 },
-          "email": { "type": "string", "format": "email", "nullable": true },
-          "phone": { "type": "string", "nullable": true },
-          "website": { "type": "string", "format": "uri", "nullable": true },
-          "industry": { "type": "string", "nullable": true },
-          "address": { "type": "string", "nullable": true }
-        }
-      },
-      "Notification": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "user_id": { "type": "integer", "description": "User ID (bigint)" },
-          "title": { "type": "string" },
-          "message": { "type": "string" },
-          "is_read": { "type": "boolean" },
-          "created_at": { "type": "string", "format": "date-time" }
-        },
-        "required": ["id", "user_id", "title", "message", "is_read", "created_at"]
-      },
-      "CreateNotificationInput": {
-        "type": "object",
-        "properties": {
-          "user_id": { "type": "string", "description": "Target user ID" },
-          "title": { "type": "string", "minLength": 1, "example": "New lead assigned" },
-          "message": { "type": "string", "minLength": 1, "example": "You have a new lead to follow up on." }
-        },
-        "required": ["user_id", "title", "message"]
-      },
       "Bid": {
         "type": "object",
         "properties": {
@@ -207,6 +126,7 @@
           "deadline": { "type": "string", "description": "Date string (YYYY-MM-DD)" },
           "suppliers": { "type": "array", "items": { "type": "string" } },
           "value": { "type": "number", "nullable": true },
+          "lead_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Reference to originating lead" },
           "created_at": { "type": "string", "format": "date-time" }
         },
         "required": ["id", "project", "client", "phase", "deadline", "suppliers", "created_at"]
@@ -219,7 +139,8 @@
           "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
           "deadline": { "type": "string", "example": "2026-05-15" },
           "suppliers": { "type": "array", "items": { "type": "string" }, "default": [], "example": ["Turner", "Skanska"] },
-          "value": { "type": "number", "nullable": true, "example": 420000000 }
+          "value": { "type": "number", "nullable": true, "example": 420000000 },
+          "lead_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Reference to originating lead" }
         },
         "required": ["project", "client", "phase", "deadline"]
       },
@@ -231,7 +152,8 @@
           "phase": { "type": "string", "enum": ["RFP Review", "Technical Eval", "Shortlist"] },
           "deadline": { "type": "string" },
           "suppliers": { "type": "array", "items": { "type": "string" } },
-          "value": { "type": "number", "nullable": true }
+          "value": { "type": "number", "nullable": true },
+          "lead_id": { "type": "string", "format": "uuid", "nullable": true }
         }
       },
       "Project": {
@@ -247,6 +169,7 @@
           "uses_3d": { "type": "boolean" },
           "competitor": { "type": "string", "nullable": true },
           "issue": { "type": "string", "nullable": true },
+          "bid_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Reference to originating bid" },
           "created_at": { "type": "string", "format": "date-time" }
         },
         "required": ["id", "project", "client", "start_date", "end_date", "progress", "suppliers", "uses_3d", "created_at"]
@@ -262,7 +185,8 @@
           "suppliers": { "type": "array", "items": { "type": "string" }, "default": [], "example": ["Suffolk", "Moss"] },
           "uses_3d": { "type": "boolean", "default": false, "example": true },
           "competitor": { "type": "string", "nullable": true, "example": "Enscape" },
-          "issue": { "type": "string", "nullable": true, "example": "Clash detection delays" }
+          "issue": { "type": "string", "nullable": true, "example": "Clash detection delays" },
+          "bid_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Reference to originating bid" }
         },
         "required": ["project", "client", "start_date", "end_date"]
       },
@@ -277,8 +201,32 @@
           "suppliers": { "type": "array", "items": { "type": "string" } },
           "uses_3d": { "type": "boolean" },
           "competitor": { "type": "string", "nullable": true },
-          "issue": { "type": "string", "nullable": true }
+          "issue": { "type": "string", "nullable": true },
+          "bid_id": { "type": "string", "format": "uuid", "nullable": true }
         }
+      },
+      "PipelineResponse": {
+        "type": "object",
+        "properties": {
+          "active_bids": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Bid" }
+          },
+          "inflight_projects": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Project" }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "total_bids": { "type": "integer" },
+              "total_projects": { "type": "integer" },
+              "total_bid_value": { "type": "number" }
+            },
+            "required": ["total_bids", "total_projects", "total_bid_value"]
+          }
+        },
+        "required": ["active_bids", "inflight_projects", "summary"]
       },
       "Campaign": {
         "type": "object",
@@ -337,7 +285,7 @@
           "company": { "type": "string", "example": "Acme Inc." },
           "jobTitle": { "type": "string", "example": "CTO" },
           "phone": { "type": "string", "example": "+1234567890" },
-          "category": { "$ref": "#/components/schemas/Category", "example": "Construction" }
+          "category": { "type": "string", "enum": ["Architecture", "Urban Development", "Infrastructure", "Other"], "example": "Architecture" }
         },
         "required": ["fullName", "workEmail"]
       },
@@ -716,286 +664,22 @@
       }
     },
 
-    "/api/companies": {
-      "post": {
-        "tags": ["Companies"],
-        "summary": "Create a company",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCompanyInput" } } }
-        },
-        "responses": {
-          "201": {
-            "description": "Company created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "message": { "type": "string" },
-                    "data": {
-                      "type": "object",
-                      "properties": { "company": { "$ref": "#/components/schemas/Company" } }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      },
+    "/api/pipeline": {
       "get": {
-        "tags": ["Companies"],
-        "summary": "List all companies",
-        "description": "Supports pagination.",
+        "tags": ["Pipeline"],
+        "summary": "Get pipeline data",
+        "description": "Returns aggregated active bids and inflight projects. Read-only view — no separate pipeline table.",
         "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
-        ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Pipeline data retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": { "type": "boolean", "example": true },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "companies": { "type": "array", "items": { "$ref": "#/components/schemas/Company" } },
-                        "pagination": { "$ref": "#/components/schemas/Pagination" }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      }
-    },
-    "/api/companies/{id}": {
-      "get": {
-        "tags": ["Companies"],
-        "summary": "Get company by ID",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "data": {
-                      "type": "object",
-                      "properties": { "company": { "$ref": "#/components/schemas/Company" } }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "404": { "description": "Company not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      },
-      "patch": {
-        "tags": ["Companies"],
-        "summary": "Update a company",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCompanyInput" } } }
-        },
-        "responses": {
-          "200": {
-            "description": "Company updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "message": { "type": "string" },
-                    "data": {
-                      "type": "object",
-                      "properties": { "company": { "$ref": "#/components/schemas/Company" } }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Validation failed or no fields to update", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "404": { "description": "Company not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      },
-      "delete": {
-        "tags": ["Companies"],
-        "summary": "Delete a company",
-        "description": "Admin only.",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Company deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "message": { "type": "string" }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      }
-    },
-
-    "/api/notifications": {
-      "post": {
-        "tags": ["Notifications"],
-        "summary": "Create a notification",
-        "description": "Admin only. Creates a notification for a specific user.",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateNotificationInput" } } }
-        },
-        "responses": {
-          "201": {
-            "description": "Notification created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "message": { "type": "string" },
-                    "data": {
-                      "type": "object",
-                      "properties": { "notification": { "$ref": "#/components/schemas/Notification" } }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Validation failed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "403": { "description": "Forbidden — admin only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      },
-      "get": {
-        "tags": ["Notifications"],
-        "summary": "Get current user's notifications",
-        "description": "Returns notifications for the authenticated user only, newest first. Supports pagination.",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "notifications": { "type": "array", "items": { "$ref": "#/components/schemas/Notification" } },
-                        "pagination": { "$ref": "#/components/schemas/Pagination" }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      }
-    },
-    "/api/notifications/{id}/read": {
-      "patch": {
-        "tags": ["Notifications"],
-        "summary": "Mark notification as read",
-        "description": "Ownership check: only the notification owner can mark it as read.",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Notification marked as read",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "message": { "type": "string" },
-                    "data": {
-                      "type": "object",
-                      "properties": { "notification": { "$ref": "#/components/schemas/Notification" } }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "description": "Authentication required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "404": { "description": "Notification not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      }
-    },
-    "/api/notifications/{id}": {
-      "delete": {
-        "tags": ["Notifications"],
-        "summary": "Delete a notification",
-        "description": "Ownership check: only the notification owner can delete it.",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "Notification deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "message": { "type": "string" }
+                    "data": { "$ref": "#/components/schemas/PipelineResponse" }
                   }
                 }
               }
