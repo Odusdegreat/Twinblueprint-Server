@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-const DEMO_CATEGORIES = ["Architecture", "Urban Development", "Infrastructure", "Other"] as const;
+const DEMO_CATEGORIES = ["Construction", "Architecture", "Urban Development", "Infrastructure", "Other"] as const;
 
 export const createDemoRequestSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),

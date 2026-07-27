@@ -1,4 +1,5 @@
 export const INDUSTRIES = [
+  "Construction",
   "Architecture",
   "Urban Development",
   "Infrastructure",
