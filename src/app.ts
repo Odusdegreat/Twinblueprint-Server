@@ -102,6 +102,10 @@ app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 app.use(sanitizeInput);
 
 // Health check (no auth required)
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.get("/api/health", (_req, res) => {
   res.status(200).json({
     success: true,
