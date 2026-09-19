@@ -33,6 +33,19 @@ const app = express();
 const rateLimitConfig = readRateLimitConfig();
 app.set("trust proxy", rateLimitConfig.trustProxyHops);
 
+// Set CORS before all routes and fallible middleware so errors retain headers.
+// Application-level cors terminates OPTIONS before rate limiting or authentication.
+app.use(
+  cors({
+    origin: env.CLIENT_URLS,
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+    exposedHeaders: ["X-Request-ID", "Retry-After", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "RateLimit-Policy"],
+    maxAge: 86400,
+  }),
+);
+
 // Raw OpenAPI JSON spec
 app.get("/api-docs.json", (_req, res) => {
   res.json(openapiSpec);
@@ -78,18 +91,6 @@ app.use(
 
 // Request logging
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
-
-// CORS
-app.use(
-  cors({
-    origin: env.CLIENT_URLS,
-    credentials: true,
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
-    exposedHeaders: ["X-Request-ID", "Retry-After", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "RateLimit-Policy"],
-    maxAge: 86400,
-  }),
-);
 
 // Broad API protection; sensitive routes retain their stricter local limiters.
 app.use("/api", ...createApiLimiters(rateLimitConfig));

@@ -15,7 +15,11 @@ export const env = {
   PORT: process.env.PORT || "5000",
   NODE_ENV: process.env.NODE_ENV || "development",
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:3000",
-  CLIENT_URLS: (process.env.CLIENT_URLS || process.env.CLIENT_URL || "http://localhost:3000").split(",").map((url) => url.trim()).filter(Boolean),
+  CLIENT_URLS: [...new Set([
+    "https://twinblueprint.vercel.app",
+    ...(process.env.CLIENT_URLS || process.env.CLIENT_URL || "http://localhost:3000")
+      .split(",").map((url) => url.trim()).filter(Boolean),
+  ])],
 
   // Supabase
   SUPABASE_URL: requiredEnv("SUPABASE_URL"),

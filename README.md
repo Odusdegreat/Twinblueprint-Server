@@ -84,7 +84,8 @@ Copy `.env.example` to `.env` and fill in:
 | `FROM_EMAIL` | Yes | Sender address |
 | `RESEND_API_KEY` | No | Required for email sending |
 | `PORT` | No | Default `5000` |
-| `CLIENT_URL` | No | Frontend origin for CORS |
+| `CLIENT_URL` | No | Frontend origin for CORS; fallback when `CLIENT_URLS` is unset |
+| `CLIENT_URLS` | No | Comma-separated approved CORS origins; the production origin `https://twinblueprint.vercel.app` is always included |
 
 ## Running
 
