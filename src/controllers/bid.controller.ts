@@ -49,5 +49,6 @@ export const deleteBid = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "Bid deleted successfully",
+    data: {},
   });
 };

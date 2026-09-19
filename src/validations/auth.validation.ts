@@ -6,3 +6,9 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const passcodeSchema = z.object({
+  passcode: z.string().min(1, "Passcode is required"),
+});
+
+export type PasscodeInput = z.infer<typeof passcodeSchema>;

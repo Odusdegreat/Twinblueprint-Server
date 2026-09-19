@@ -16,6 +16,19 @@ export const login = async (req: Request, res: Response) => {
   });
 };
 
+export const loginWithPasscode = async (req: Request, res: Response) => {
+  const { passcode } = req.body;
+
+  const { token } = await authService.loginWithPasscode(passcode);
+
+  res.cookie("token", token, cookieConfig);
+
+  res.status(200).json({
+    success: true,
+    data: { token, user: { role: "admin" } },
+  });
+};
+
 export const getMe = async (req: Request, res: Response) => {
   const user = await authService.getCurrentUser(req.userId!);
 

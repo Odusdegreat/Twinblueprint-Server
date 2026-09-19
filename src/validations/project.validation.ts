@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { PROJECT_PHASES, PROJECT_STATUSES } from "../types/project.types.ts";
 
 export const createProjectSchema = z.object({
   project: z.string().min(1, "Project name is required"),
@@ -11,6 +12,10 @@ export const createProjectSchema = z.object({
   competitor: z.string().nullable().optional(),
   issue: z.string().nullable().optional(),
   bid_id: z.string().uuid().nullable().optional(),
+  status: z.enum(PROJECT_STATUSES).default("Active"),
+  phase: z.enum(PROJECT_PHASES).default("Planning"),
+  value: z.number().nullable().optional(),
+  currency: z.string().trim().min(1).nullable().optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -24,6 +29,15 @@ export const updateProjectSchema = z.object({
   competitor: z.string().nullable().optional(),
   issue: z.string().nullable().optional(),
   bid_id: z.string().uuid().nullable().optional(),
+  status: z.enum(PROJECT_STATUSES).optional(),
+  phase: z.enum(PROJECT_PHASES).optional(),
+  value: z.number().nullable().optional(),
+  currency: z.string().trim().min(1).nullable().optional(),
+});
+
+export const projectSupplierParams = z.object({
+  id: z.string().uuid(),
+  supplierId: z.string().uuid(),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

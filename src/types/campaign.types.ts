@@ -13,6 +13,11 @@ export interface Campaign {
   created_at: string;
 }
 
+export interface CampaignWithStats extends Campaign {
+  open_rate: number;
+  ctr: number;
+}
+
 export interface CampaignStats {
   total_sent: number;
   total_opens: number;

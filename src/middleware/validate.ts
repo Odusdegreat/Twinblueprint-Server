@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 import type { ZodSchema } from "zod/v4";
 
 interface ValidateOptions {
@@ -17,9 +17,7 @@ export const validate = (schemas: ZodSchema | ValidateOptions) => {
     if (schemasObj.body) {
       const result = schemasObj.body.safeParse(req.body);
       if (!result.success) {
-        const message =
-          result.error.issues[0]?.message ?? "Validation failed";
-        res.status(400).json({ success: false, message });
+        next(result.error);
         return;
       }
       req.body = result.data;
@@ -28,9 +26,7 @@ export const validate = (schemas: ZodSchema | ValidateOptions) => {
     if (schemasObj.params) {
       const result = schemasObj.params.safeParse(req.params);
       if (!result.success) {
-        const message =
-          result.error.issues[0]?.message ?? "Invalid parameters";
-        res.status(400).json({ success: false, message });
+        next(result.error);
         return;
       }
     }
@@ -38,9 +34,7 @@ export const validate = (schemas: ZodSchema | ValidateOptions) => {
     if (schemasObj.query) {
       const result = schemasObj.query.safeParse(req.query);
       if (!result.success) {
-        const message =
-          result.error.issues[0]?.message ?? "Invalid query parameters";
-        res.status(400).json({ success: false, message });
+        next(result.error);
         return;
       }
     }

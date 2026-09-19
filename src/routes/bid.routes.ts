@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { linkSupplier } from "../services/supplier.service.ts";
+import { supplierLinkParams } from "../validations/supplier.validation.ts";
 import {
   createBid,
   getBids,
@@ -14,6 +16,14 @@ import { createBidSchema, updateBidSchema } from "../validations/bid.validation.
 const router = Router();
 
 router.use(authenticate);
+router.put("/:id/suppliers/:supplierId", authorize("admin"), validate({ body: undefined, params: supplierLinkParams }), async (req, res) => {
+  await linkSupplier(req.params.id as string, req.params.supplierId as string);
+  res.json({ success: true, message: "Supplier linked to bid", data: {} });
+});
+router.delete("/:id/suppliers/:supplierId", authorize("admin"), validate({ body: undefined, params: supplierLinkParams }), async (req, res) => {
+  await linkSupplier(req.params.id as string, req.params.supplierId as string, true);
+  res.json({ success: true, message: "Supplier unlinked from bid", data: {} });
+});
 
 router.post("/", authorize("admin"), validate(createBidSchema), createBid);
 router.get("/", getBids);

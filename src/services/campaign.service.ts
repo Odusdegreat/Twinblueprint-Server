@@ -1,6 +1,52 @@
 import { supabase } from "../config/supabase.ts";
-import type { Campaign, CampaignStats } from "../types/campaign.types.ts";
+import type { Campaign, CampaignWithStats, CampaignStats } from "../types/campaign.types.ts";
 import type { CreateCampaignInput, UpdateCampaignInput } from "../validations/campaign.validation.ts";
+
+type CampaignCounters = Pick<
+  CampaignWithStats,
+  "sent" | "opened" | "clicked" | "open_rate" | "ctr"
+>;
+
+const roundTo1dp = (value: number): number => Math.round(value * 10) / 10;
+
+const getCampaignCounters = async (
+  campaignIds: string[],
+): Promise<Map<string, CampaignCounters>> => {
+  const counters = new Map<string, CampaignCounters>();
+
+  for (const id of campaignIds) {
+    counters.set(id, { sent: 0, opened: 0, clicked: 0, open_rate: 0, ctr: 0 });
+  }
+
+  if (campaignIds.length === 0) {
+    return counters;
+  }
+
+  const { data, error } = await supabase
+    .from("email_logs")
+    .select("campaign_id, sent_at, opened_at, clicked_at")
+    .in("campaign_id", campaignIds);
+
+  if (error) {
+    console.error("[CAMPAIGN] getCampaignCounters error:", error);
+    throw Object.assign(new Error("Failed to fetch campaign stats"), { statusCode: 500 });
+  }
+
+  for (const row of data ?? []) {
+    const entry = counters.get(row.campaign_id);
+    if (!entry) continue;
+    if (row.sent_at) entry.sent += 1;
+    if (row.opened_at) entry.opened += 1;
+    if (row.clicked_at) entry.clicked += 1;
+  }
+
+  for (const entry of counters.values()) {
+    entry.open_rate = entry.sent > 0 ? roundTo1dp((entry.opened / entry.sent) * 100) : 0;
+    entry.ctr = entry.sent > 0 ? roundTo1dp((entry.clicked / entry.sent) * 100) : 0;
+  }
+
+  return counters;
+};
 
 export const createCampaign = async (data: CreateCampaignInput): Promise<Campaign> => {
   const { data: campaign, error } = await supabase
@@ -28,7 +74,7 @@ export const createCampaign = async (data: CreateCampaignInput): Promise<Campaig
 export const getCampaigns = async (
   page: number,
   limit: number,
-): Promise<{ campaigns: Campaign[]; total: number }> => {
+): Promise<{ campaigns: CampaignWithStats[]; total: number }> => {
   const offset = (page - 1) * limit;
 
   const [result, countResult] = await Promise.all([
@@ -45,13 +91,19 @@ export const getCampaigns = async (
     throw Object.assign(new Error("Failed to fetch campaigns"), { statusCode: 500 });
   }
 
+  const campaigns = (result.data ?? []) as Campaign[];
+  const counters = await getCampaignCounters(campaigns.map((c) => c.id));
+
   return {
-    campaigns: (result.data ?? []) as Campaign[],
+    campaigns: campaigns.map((campaign) => ({
+      ...campaign,
+      ...counters.get(campaign.id)!,
+    })),
     total: countResult.count ?? 0,
   };
 };
 
-export const getCampaignById = async (id: string): Promise<Campaign> => {
+export const getCampaignById = async (id: string): Promise<CampaignWithStats> => {
   const { data, error } = await supabase
     .from("campaigns")
     .select("*")
@@ -63,7 +115,9 @@ export const getCampaignById = async (id: string): Promise<Campaign> => {
     throw Object.assign(new Error("Campaign not found"), { statusCode: 404 });
   }
 
-  return data as Campaign;
+  const counters = await getCampaignCounters([id]);
+
+  return { ...(data as Campaign), ...counters.get(id)! };
 };
 
 export const updateCampaign = async (id: string, data: UpdateCampaignInput): Promise<Campaign> => {
@@ -105,10 +159,11 @@ export const deleteCampaign = async (id: string): Promise<void> => {
   }
 };
 
-export const getCampaignStats = async (): Promise<CampaignStats> => {
+export const getCampaignStats = async (campaignId?: string): Promise<CampaignStats> => {
   const { data, error } = await supabase
-    .from("campaigns")
-    .select("sent, opened, clicked");
+    .from("email_logs")
+    .select("sent_at, opened_at, clicked_at")
+    .match(campaignId ? { campaign_id: campaignId } : {});
 
   if (error) {
     console.error("[CAMPAIGN] getCampaignStats error:", error);
@@ -116,9 +171,9 @@ export const getCampaignStats = async (): Promise<CampaignStats> => {
   }
 
   const rows = data ?? [];
-  const total_sent = rows.reduce((sum, r) => sum + (r.sent ?? 0), 0);
-  const total_opens = rows.reduce((sum, r) => sum + (r.opened ?? 0), 0);
-  const total_clicks = rows.reduce((sum, r) => sum + (r.clicked ?? 0), 0);
+  const total_sent = rows.filter((row) => row.sent_at).length;
+  const total_opens = rows.filter((row) => row.opened_at).length;
+  const total_clicks = rows.filter((row) => row.clicked_at).length;
   const avg_ctr = total_sent > 0 ? Math.round((total_clicks / total_sent) * 1000) / 10 : 0;
 
   return { total_sent, total_opens, total_clicks, avg_ctr };

@@ -12,8 +12,15 @@ GRANT ALL ON public.users TO authenticated;
 GRANT ALL ON public.leads TO service_role;
 GRANT ALL ON public.leads TO authenticated;
 
-GRANT ALL ON public.companies TO service_role;
-GRANT ALL ON public.companies TO authenticated;
+DO $$
+BEGIN
+  IF to_regclass('public.companies') IS NOT NULL THEN
+    GRANT ALL ON public.companies TO service_role;
+    GRANT ALL ON public.companies TO authenticated;
+    ALTER TABLE companies DISABLE ROW LEVEL SECURITY;
+    CREATE INDEX IF NOT EXISTS idx_companies_company_name ON companies(company_name);
+  END IF;
+END $$;
 
 GRANT ALL ON public.notifications TO service_role;
 GRANT ALL ON public.notifications TO authenticated;
@@ -39,23 +46,27 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'leads' AND column_name = 'industry'
+    WHERE table_schema = 'public' AND table_name = 'leads' AND column_name = 'category'
   ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'leads' AND column_name = 'category'
+    WHERE table_schema = 'public' AND table_name = 'leads' AND column_name = 'industry'
   ) THEN
-    ALTER TABLE leads RENAME COLUMN industry TO category;
+    ALTER TABLE public.leads RENAME COLUMN category TO industry;
   END IF;
 END $$;
 
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS industry TEXT;
+NOTIFY pgrst, 'reload schema';
+
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS applications integer DEFAULT 0;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS score integer DEFAULT 0;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS region TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS country TEXT;
 
 -- ============================================================
 -- RLS FIX — disables RLS on all tables so service_role works
 -- ============================================================
 ALTER TABLE leads DISABLE ROW LEVEL SECURITY;
-ALTER TABLE companies DISABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bids DISABLE ROW LEVEL SECURITY;
@@ -68,7 +79,6 @@ ALTER TABLE campaigns DISABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_companies_company_name ON companies(company_name);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
@@ -110,7 +120,18 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS suppliers JSONB DEFAULT '[]'::json
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS uses_3d BOOLEAN DEFAULT false;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS competitor TEXT;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS issue TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS phase TEXT NOT NULL DEFAULT 'Planning';
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS value NUMERIC;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS currency TEXT;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'projects_phase_check') THEN
+    ALTER TABLE projects ADD CONSTRAINT projects_phase_check
+      CHECK (phase IN ('Planning', 'Design', 'Construction', 'In Progress', 'Completed'));
+  END IF;
+END $$;
 
 UPDATE projects SET project = '' WHERE project IS NULL;
 UPDATE projects SET client = '' WHERE client IS NULL;

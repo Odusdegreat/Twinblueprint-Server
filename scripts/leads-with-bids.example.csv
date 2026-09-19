@@ -1,0 +1,2 @@
+full_name,email,company,project,status,project_size,bid_value,suppliers,bid_phase,bid_deadline
+Example Person,example@example.com,Example Company,Example Project,won,$20M-$50M,15000,Supplier A;Supplier B,Shortlist,2026-12-01

@@ -28,3 +28,9 @@ export const getKPIs = async (_req: Request, res: Response) => {
     data: kpis,
   });
 };
+
+export const getDashboard = async (req: Request, res: Response) => {
+  const weeks = Math.min(52, Math.max(1, Number(req.query.weeks) || 8));
+  const dashboard = await analyticsService.getDashboard(weeks);
+  res.status(200).json({ success: true, data: dashboard });
+};

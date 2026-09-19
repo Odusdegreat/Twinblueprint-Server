@@ -1,3 +1,39 @@
+- **Opportunities**: Standalone supplier opportunities with optional lead, project, and bid links
+- **Outreach sequences**: Persistent four-touch follow-ups, manual activity, and scheduled email delivery. See [sequence API and deployment instructions](scripts/outreach-sequences-api.md). Apply `scripts/outreach-sequences-migration.sql`, then set `OUTREACH_SCHEDULER_ENABLED=true` on a running backend instance.
+- **Outreach cards**: LinkedIn sent, response rate, and meetings booked share one reporting period. See [stats, manual replies, and meetings API](scripts/outreach-stats-api.md); apply `scripts/outreach-activity-migration.sql` to enable tracking.
+
+### Supplier opportunities
+
+Run `scripts/supplier-migration.sql` after the base CRM migrations. All opportunity reads require authentication; create, edit, delete, and supplier-link operations require the `admin` role.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/suppliers/:supplierId/opportunities?page=1&limit=20` | Paginated supplier opportunities |
+| `GET` | `/api/opportunities?search=airport&page=1&limit=20` | Search all opportunities for selectors |
+| `POST` | `/api/opportunities` | Create an opportunity |
+| `GET` | `/api/opportunities/:id` | Get an opportunity |
+| `PATCH` | `/api/opportunities/:id` | Edit an opportunity |
+| `DELETE` | `/api/opportunities/:id` | Delete an opportunity |
+| `PUT` | `/api/opportunities/:id/suppliers/:supplierId` | Link another supplier |
+| `DELETE` | `/api/opportunities/:id/suppliers/:supplierId` | Unlink a supplier |
+
+Create example:
+
+```json
+{
+  "supplier_id": "supplier-uuid",
+  "project_id": "project-uuid",
+  "name": "Airport expansion",
+  "insight": "Early design influence",
+  "status": "open",
+  "value": 2500000,
+  "currency": "USD"
+}
+```
+
+`status` must be `open`, `qualified`, `won`, or `lost`. `value` accepts a number, `0`, or `null`; omitted nullable fields are stored as `null`. Supplier detail responses expose the compact `opportunities` array with `id`, `name`, `project`, `value`, `currency`, `insight`, and `status`.
+
+Projects can be linked to suppliers by ID with `PUT /api/projects/:id/suppliers/:supplierId` and unlinked with the corresponding `DELETE` route. Supplier responses include active projects from these links and also support legacy project `suppliers` name arrays using trimmed, case-insensitive matching.
 # TwinBlueprint Server
 
 REST API server for TwinBlueprint — a public website + CRM system. Built with Bun, Express, and TypeScript.
@@ -64,6 +100,7 @@ bun run start    # production
 | `GET` | `/api/health` | No | Health check |
 | `POST` | `/api/demo` | No | Submit demo request (rate: 5/hr) |
 | `POST` | `/api/auth/login` | No | Admin login |
+| `POST` | `/api/auth/passcode` | No | Admin passcode login (rate: 5/min/IP) |
 | `GET` | `/api/auth/me` | Yes | Get current user |
 | `POST` | `/api/auth/logout` | Yes | Logout |
 | `GET` | `/api/leads` | Yes | List leads (paginated) |
@@ -87,6 +124,12 @@ Response includes:
 ### API Docs
 
 Open `http://localhost:5000/api-docs` for Swagger UI.
+
+### CRM examples
+
+All protected CRM calls use `Authorization: Bearer <token>`. `POST /api/leads` accepts the lead fields shown in Swagger, including `industry`, `region`, `project`, `project_size`, `phase`, `lead_status`, and `archived`. `GET /api/leads` supports `search`, `industry`, `region`, `project`, `phase`, `lead_status`, `status`, `min_score`, `archived`, `page`, `limit`, `sort_by`, and `sort_order`.
+
+`POST /api/leads/import` accepts a multipart `file` field containing a CSV with `full_name,email` headers. It responds with `{ "success": true, "data": { "created": 1, "skipped": 0, "failed": 0, "errors": [] } }`. `GET /api/leads/export?region=EMEA&phase=Bid` downloads a filtered CSV. Swagger includes request and response examples for the dashboard, regional, campaign-statistics, outreach, and webhook endpoints.
 
 ## Project Structure
 
@@ -125,3 +168,24 @@ src/
     ├── demo.validation.ts
     └── lead.validation.ts
 ```
+
+## API rate limiting and Render
+
+API traffic uses separate per-client-IP budgets: GET/HEAD requests allow 600 per minute; writes allow 120 per minute. Health checks (`GET/HEAD /api/health`) and OPTIONS do not consume quota. Non-API routes do not consume API quota. Authentication requirements remain in each router. Strict limits remain on POST `/api/auth/login` (10/15 minutes), `/api/auth/passcode` (5/minute), and `/api/demo` (5/hour), in addition to the broad write budget.
+
+Optional environment settings (validated at startup):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `API_RATE_LIMIT_WINDOW_MS` | `60000` | API window in milliseconds |
+| `API_RATE_LIMIT_READ_MAX` | `600` | GET/HEAD requests per client IP per window |
+| `API_RATE_LIMIT_WRITE_MAX` | `120` | Other requests per client IP per window |
+| `TRUST_PROXY_HOPS` | `1` when `RENDER=true`, otherwise `0` | Number of trusted reverse proxy hops; zero for direct hosting |
+
+Redeploy after changing these values. For Render's direct ingress, the default assumes one trusted hop. Verify the actual proxy path and client IP in your deployment before overriding the hop count, especially with a CDN in front. Never blindly trust every forwarded address: see [Express proxy guidance](https://expressjs.com/en/guide/behind-proxies/). Users sharing a public IP also share a budget.
+
+The default in-memory store resets each client's count after its window expires; blocked responses do not extend that window. State is local to each server process and resets on restart. Multiple instances require a shared store if a deployment-wide quota is needed. Responses expose `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` (seconds remaining), and `RateLimit-Policy` through CORS; 429 responses also expose `Retry-After` in seconds. Sensitive endpoint windows can be longer than the general API window. See [limiter configuration](https://express-rate-limit.mintlify.app/reference/configuration).
+
+Frontend source is not in this repository. Check its QueryClient retry policy: avoid immediate retries on 429; honor `Retry-After`. Use stable query keys, a shared QueryClient, and suitable `staleTime` for options/regions; inspect mount/focus refetches and concurrent queries with different page sizes. TanStack Query defaults to retrying failed queries three times and may refetch stale data on mount, focus, and reconnect ([defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults)). These are possible traffic multipliers, not confirmed causes in this deployment.
+
+Run limiter regression checks with `bun test scripts/rate-limit.test.ts`.

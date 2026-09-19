@@ -12,6 +12,7 @@ declare global {
     interface Request {
       userId?: string;
       userRole?: string;
+      rawBody?: Buffer;
     }
   }
 }

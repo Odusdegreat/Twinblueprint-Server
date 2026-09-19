@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/auth.ts";
+import { authorize } from "../middleware/authorize.ts";
+import { validate } from "../middleware/validate.ts";
+import { outreachPreviewSchema, outreachSendSchema } from "../validations/outreach.validation.ts";
+import * as controller from "../controllers/outreach.controller.ts";
+import sequenceRoutes from "./sequence.routes.ts";
+import activityRoutes from "./outreach-activity.routes.ts";
+const router = Router();
+router.use(authenticate);
+router.use(activityRoutes);
+router.use("/sequences", sequenceRoutes);
+router.get("/messages", controller.messages);
+router.post("/preview", authorize("admin"), validate(outreachPreviewSchema), controller.preview);
+router.post("/send", authorize("admin"), validate(outreachSendSchema), controller.send);
+export default router;

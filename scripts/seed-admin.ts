@@ -26,8 +26,16 @@ GRANT ALL ON public.users TO service_role;
 GRANT ALL ON public.users TO authenticated;
 GRANT ALL ON public.leads TO service_role;
 GRANT ALL ON public.leads TO authenticated;
-GRANT ALL ON public.companies TO service_role;
-GRANT ALL ON public.companies TO authenticated;
+
+DO $$
+BEGIN
+  IF to_regclass('public.companies') IS NOT NULL THEN
+    GRANT ALL ON public.companies TO service_role;
+    GRANT ALL ON public.companies TO authenticated;
+    CREATE INDEX IF NOT EXISTS idx_companies_company_name ON companies (company_name);
+  END IF;
+END $$;
+
 GRANT ALL ON public.notifications TO service_role;
 GRANT ALL ON public.notifications TO authenticated;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO service_role;
@@ -37,7 +45,6 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads (email);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads (status);
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_companies_company_name ON companies (company_name);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications (user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);

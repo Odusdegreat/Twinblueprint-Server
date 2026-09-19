@@ -3,6 +3,7 @@ export const INDUSTRIES = [
   "Architecture",
   "Urban Development",
   "Infrastructure",
+  "Engineering",
   "Other",
 ] as const;
 

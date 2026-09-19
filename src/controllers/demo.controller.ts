@@ -13,14 +13,20 @@ export const createDemoRequest = async (req: Request, res: Response) => {
     .sendLeadNotification({
       to: env.NOTIFICATION_EMAIL,
       fullName: newLead.full_name,
-      email: newLead.email,
-      company: newLead.company ?? undefined,
-      jobTitle: newLead.job_title ?? undefined,
-      phone: newLead.phone ?? undefined,
-      category: newLead.category ?? undefined,
-      dateSubmitted: new Date(newLead.created_at),
     })
     .catch((err) => console.error("[DEMO] Email notification failed:", err));
+
+  // Every successful demo booking sends the submitter a confirmation.
+  emailService
+    .sendSubmitterConfirmation({
+      to: newLead.email,
+      fullName: newLead.full_name,
+      source: "demo",
+    })
+    .then((result) => {
+      if (!result.success) console.error("[DEMO] Booking confirmation email failed:", result.error ?? result.message);
+    })
+    .catch((err) => console.error("[DEMO] Booking confirmation email failed:", err));
 
   res.status(201).json({
     success: true,

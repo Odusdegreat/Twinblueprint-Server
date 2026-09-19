@@ -1,5 +1,8 @@
 import app from "./src/app.ts";
 import { env } from "./src/config/env.config.ts";
+import { startSequenceWorker } from "./src/services/sequence-worker.service.ts";
+
+const stopSequenceWorker = process.env.OUTREACH_SCHEDULER_ENABLED === "true" ? startSequenceWorker() : async () => {};
 
 const server = app.listen(env.PORT, () => {
   console.log(`Server running on http://localhost:${env.PORT}`);
@@ -7,7 +10,9 @@ const server = app.listen(env.PORT, () => {
 
 const shutdown = (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
-  server.close(() => {
+  const workerStopped = stopSequenceWorker();
+  server.close(async () => {
+    await workerStopped;
     console.log("Server closed.");
     process.exit(0);
   });

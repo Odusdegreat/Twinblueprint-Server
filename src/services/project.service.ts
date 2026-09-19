@@ -2,6 +2,8 @@ import { supabase } from "../config/supabase.ts";
 import type { Project } from "../types/project.types.ts";
 import type { CreateProjectInput, UpdateProjectInput } from "../validations/project.validation.ts";
 
+const fail = (message: string, statusCode = 500) => Object.assign(new Error(message), { statusCode });
+
 export const createProject = async (data: CreateProjectInput): Promise<Project> => {
   const { data: project, error } = await supabase
     .from("projects")
@@ -16,6 +18,10 @@ export const createProject = async (data: CreateProjectInput): Promise<Project> 
       competitor: data.competitor ?? null,
       issue: data.issue ?? null,
       bid_id: data.bid_id ?? null,
+      status: data.status,
+      phase: data.phase,
+      value: data.value ?? null,
+      currency: data.currency ?? null,
     })
     .select()
     .single();
@@ -82,6 +88,10 @@ export const updateProject = async (id: string, data: UpdateProjectInput): Promi
   if (data.competitor !== undefined) updates.competitor = data.competitor;
   if (data.issue !== undefined) updates.issue = data.issue;
   if (data.bid_id !== undefined) updates.bid_id = data.bid_id;
+  if (data.status !== undefined) updates.status = data.status;
+  if (data.phase !== undefined) updates.phase = data.phase;
+  if (data.value !== undefined) updates.value = data.value;
+  if (data.currency !== undefined) updates.currency = data.currency;
 
   if (Object.keys(updates).length === 0) {
     throw Object.assign(new Error("No fields to update"), { statusCode: 400 });
@@ -108,5 +118,37 @@ export const deleteProject = async (id: string): Promise<void> => {
   if (error) {
     console.error("[PROJECT] deleteProject error:", error);
     throw Object.assign(new Error("Failed to delete project"), { statusCode: 500 });
+  }
+};
+
+const ensureProject = async (id: string) => {
+  const { data, error } = await supabase.from("projects").select("id").eq("id", id).maybeSingle();
+  if (error) throw fail("Failed to fetch project");
+  if (!data) throw fail("Project not found", 404);
+};
+
+const ensureSupplier = async (id: string) => {
+  const { data, error } = await supabase.from("suppliers").select("id").eq("id", id).maybeSingle();
+  if (error) throw fail("Failed to fetch supplier");
+  if (!data) throw fail("Supplier not found", 404);
+};
+
+export const linkProjectSupplier = async (projectId: string, supplierId: string, remove = false) => {
+  await ensureProject(projectId);
+  await ensureSupplier(supplierId);
+  const result = remove
+    ? await supabase.from("project_suppliers").delete().eq("project_id", projectId).eq("supplier_id", supplierId)
+    : await supabase.from("project_suppliers").upsert({ project_id: projectId, supplier_id: supplierId }, { onConflict: "project_id,supplier_id" });
+  if (result.error) {
+    console.error("[PROJECT] project supplier link error:", result.error);
+    const statusCode = result.error.code === "23503" ? 404 : 500;
+    const message = result.error.code === "23503"
+      ? "Project or supplier not found"
+      : ["PGRST205", "PGRST200", "42P01"].includes(result.error.code ?? "")
+        ? "Project supplier migration has not been applied; run scripts/supplier-migration.sql and reload the Supabase schema"
+        : result.error.code === "42501"
+          ? "Project supplier link permission denied; check service-role database grants"
+          : "Failed to save project supplier link";
+    throw fail(message, statusCode);
   }
 };

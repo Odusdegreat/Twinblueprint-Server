@@ -60,3 +60,8 @@ export const getCampaignStats = async (_req: Request, res: Response) => {
     data: stats,
   });
 };
+
+export const getCampaignStatsById = async (req: Request, res: Response) => {
+  const stats = await campaignService.getCampaignStats(getId(req));
+  res.status(200).json({ success: true, data: stats });
+};

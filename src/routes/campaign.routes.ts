@@ -6,6 +6,7 @@ import {
   updateCampaign,
   deleteCampaign,
   getCampaignStats,
+  getCampaignStatsById,
 } from "../controllers/campaign.controller.ts";
 import { authenticate } from "../middleware/auth.ts";
 import { authorize } from "../middleware/authorize.ts";
@@ -17,6 +18,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/stats", getCampaignStats);
+router.get("/:id/stats", getCampaignStatsById);
 router.post("/", authorize("admin"), validate(createCampaignSchema), createCampaign);
 router.get("/", getCampaigns);
 router.get("/:id", getCampaignById);

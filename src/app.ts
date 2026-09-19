@@ -1,8 +1,10 @@
 import express from "express";
+import supplierRoutes from "./routes/supplier.routes.ts";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import rateLimit from "express-rate-limit";
+import { readRateLimitConfig } from "./config/rate-limit.config.ts";
+import { createApiLimiters } from "./middleware/rateLimit.ts";
 import swaggerUi from "swagger-ui-express";
 
 import { env } from "./config/env.config.ts";
@@ -15,6 +17,10 @@ import demoRoutes from "./routes/demo.routes.ts";
 import leadRoutes from "./routes/lead.routes.ts";
 import pipelineRoutes from "./routes/pipeline.routes.ts";
 import projectRoutes from "./routes/project.routes.ts";
+import regionRoutes from "./routes/region.routes.ts";
+import outreachRoutes from "./routes/outreach.routes.ts";
+import webhookRoutes from "./routes/webhook.routes.ts";
+import opportunityRoutes from "./routes/opportunity.routes.ts";
 import { errorHandler } from "./middleware/errorHandler.ts";
 import { INDUSTRIES } from "./config/industries.ts";
 import {
@@ -24,6 +30,8 @@ import {
 } from "./middleware/security.ts";
 
 const app = express();
+const rateLimitConfig = readRateLimitConfig();
+app.set("trust proxy", rateLimitConfig.trustProxyHops);
 
 // Raw OpenAPI JSON spec
 app.get("/api-docs.json", (_req, res) => {
@@ -74,28 +82,20 @@ app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 // CORS
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: env.CLIENT_URLS,
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
-    exposedHeaders: ["X-Request-ID"],
+    exposedHeaders: ["X-Request-ID", "Retry-After", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "RateLimit-Policy"],
     maxAge: 86400,
   }),
 );
 
-// Global rate limiting
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { success: false, message: "Too many requests, try again later" },
-    standardHeaders: true,
-    legacyHeaders: false,
-  }),
-);
+// Broad API protection; sensitive routes retain their stricter local limiters.
+app.use("/api", ...createApiLimiters(rateLimitConfig));
 
 // Body parsing with size limits
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "10kb", verify: (req, _res, buffer) => { (req as express.Request).rawBody = buffer; } }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
 // Input sanitization
@@ -122,11 +122,16 @@ app.get("/api/industries", (_req, res) => {
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/bids", bidRoutes);
+app.use("/api/suppliers", supplierRoutes);
+app.use("/api/opportunities", opportunityRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/demo", demoRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/pipeline", pipelineRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/regions", regionRoutes);
+app.use("/api/outreach", outreachRoutes);
+app.use("/api/webhooks", webhookRoutes);
 
 // 404 handler
 app.use((_req, res) => {

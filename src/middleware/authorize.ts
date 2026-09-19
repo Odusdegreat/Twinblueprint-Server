@@ -9,3 +9,15 @@ export const authorize = (...roles: string[]) => {
     next();
   };
 };
+
+export const authorizeLeadUpdate = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (req.body.archived !== undefined && req.userRole !== "admin") {
+    res.status(403).json({ success: false, message: "Forbidden" });
+    return;
+  }
+  next();
+};

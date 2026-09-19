@@ -4,5 +4,7 @@ export interface CreateDemoRequestDTO {
   company?: string;
   jobTitle?: string;
   phone?: string;
-  category?: string;
+  industry?: string;
+  /** @deprecated Demo bookings always send the submitter a confirmation. */
+  confirmationEmail?: boolean;
 }

@@ -20,6 +20,11 @@ export const removePoweredBy = (
   next();
 };
 
+// Fields that carry email body/header content. These may contain HTML
+// (e.g. outreach templates and sequence messages) and are sent to the email
+// provider raw, so they must not be HTML-escaped by input sanitization.
+const HTML_CONTENT_FIELDS = new Set(["template", "message", "subject", "passcode"]);
+
 export const sanitizeInput = (
   req: Request,
   _res: Response,
@@ -34,11 +39,13 @@ export const sanitizeInput = (
 const sanitizeObject = (obj: Record<string, unknown>): void => {
   for (const key of Object.keys(obj)) {
     if (typeof obj[key] === "string") {
-      obj[key] = (obj[key] as string)
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#x27;");
+      if (!HTML_CONTENT_FIELDS.has(key)) {
+        obj[key] = (obj[key] as string)
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#x27;");
+      }
     } else if (typeof obj[key] === "object" && obj[key] !== null) {
       sanitizeObject(obj[key] as Record<string, unknown>);
     }
