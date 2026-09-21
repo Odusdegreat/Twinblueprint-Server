@@ -1,7 +1,7 @@
 -- Disposable local fixture only; all test rows roll back.
 BEGIN;
 DO $$
-DECLARE a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); u uuid:=gen_random_uuid(); l uuid; q uuid;
+DECLARE a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); u bigint:=1; l uuid; q uuid;
   payload jsonb; saved jsonb; stats jsonb; before_sequences bigint; before_steps bigint;
 BEGIN
   IF current_database()<>'outreach_sequences_test' THEN RAISE EXCEPTION 'Disposable test database required'; END IF;

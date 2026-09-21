@@ -5,9 +5,21 @@ CREATE TABLE IF NOT EXISTS public.outreach_linkedin_sends (
   lead_id uuid NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,
   message text NOT NULL CHECK (length(btrim(message)) > 0 AND length(message) <= 10000),
   sent_at timestamptz NOT NULL,
-  recorded_by uuid NOT NULL REFERENCES public.users(id),
+  recorded_by bigint NOT NULL REFERENCES public.users(id),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+DO $$
+BEGIN
+  IF to_regclass('public.outreach_linkedin_sends') IS NOT NULL AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='outreach_linkedin_sends' AND column_name='recorded_by' AND data_type='uuid'
+  ) THEN
+    ALTER TABLE public.outreach_linkedin_sends DROP CONSTRAINT IF EXISTS outreach_linkedin_sends_recorded_by_fkey;
+    ALTER TABLE public.outreach_linkedin_sends
+      ALTER COLUMN recorded_by TYPE bigint USING recorded_by::bigint,
+      ADD CONSTRAINT outreach_linkedin_sends_recorded_by_fkey FOREIGN KEY (recorded_by) REFERENCES public.users(id);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS outreach_linkedin_sends_lead_time ON public.outreach_linkedin_sends(lead_id,sent_at);
 ALTER TABLE public.outreach_linkedin_sends ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.outreach_linkedin_sends FROM PUBLIC,anon,authenticated;
@@ -21,14 +33,14 @@ BEGIN
     RAISE EXCEPTION 'A non-empty message and non-future sent_at are required' USING ERRCODE='22023';
   END IF;
   INSERT INTO public.outreach_linkedin_sends(id,lead_id,message,sent_at,recorded_by)
-    VALUES((p_input->>'id')::uuid,(p_input->>'lead_id')::uuid,p_input->>'message',(p_input->>'sent_at')::timestamptz,(p_input->>'recorded_by')::uuid)
+    VALUES((p_input->>'id')::uuid,(p_input->>'lead_id')::uuid,p_input->>'message',(p_input->>'sent_at')::timestamptz,(p_input->>'recorded_by')::bigint)
     ON CONFLICT(id) DO NOTHING RETURNING * INTO v_row;
   IF NOT FOUND THEN
     SELECT * INTO v_row FROM public.outreach_linkedin_sends WHERE id=(p_input->>'id')::uuid;
     IF v_row.lead_id IS DISTINCT FROM (p_input->>'lead_id')::uuid
       OR v_row.message IS DISTINCT FROM p_input->>'message'
       OR v_row.sent_at IS DISTINCT FROM (p_input->>'sent_at')::timestamptz
-      OR v_row.recorded_by IS DISTINCT FROM (p_input->>'recorded_by')::uuid THEN
+      OR v_row.recorded_by IS DISTINCT FROM (p_input->>'recorded_by')::bigint THEN
       RAISE EXCEPTION 'Activity ID already belongs to a different record' USING ERRCODE='23505';
     END IF;
   END IF;

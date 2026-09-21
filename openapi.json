@@ -2633,9 +2633,10 @@
             "description": "Required, cannot be future."
           },
           "recorded_by": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
+            "type": "integer",
+            "minimum": 1,
+            "readOnly": true,
+            "description": "users.id of the authenticated admin"
           },
           "created_at": {
             "type": "string",

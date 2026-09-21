@@ -25,7 +25,7 @@ Example HTTP 201 response (timestamps and IDs illustrative):
     "lead_id": "217b801e-3118-4b7c-8f4a-0cda0ef60b94",
     "message": "Hi Sam, here is the information we discussed.",
     "sent_at": "2026-09-21T09:00:00+00:00",
-    "recorded_by": "b33b1651-4aaa-48a7-92f4-7b3f581f04a3",
+    "recorded_by": 1,
     "created_at": "2026-09-21T09:01:00+00:00"
   }
 }
@@ -45,7 +45,7 @@ Requires authentication, consistent with other activity reads. Response:
 {"success":true,"data":{"linkedin_sends":[],"pagination":{"page":1,"limit":20,"total":0,"pages":0}}}
 ```
 
-For populated results, each array element has the same fields as the POST response's `data`. Records sort by creation time descending, then ID descending. `lead_id` is required; page >= 1; limit 1–100.
+For populated results, each array element has the same fields as the POST response's `data`. Records sort by creation time descending, then ID descending. `lead_id` is required; page >= 1; limit 1ï¿½100.
 
 ## Statistics
 

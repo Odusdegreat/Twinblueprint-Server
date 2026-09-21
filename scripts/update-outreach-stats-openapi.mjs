@@ -69,7 +69,7 @@ schemas.RecordOutreachLinkedinSend = { type: "object", additionalProperties: fal
   message: { type: "string", minLength: 1, maxLength: 10000, description: "Exact message text. Whitespace-only text is invalid; no trimming or escaping is applied." },
   sent_at: { ...date, description: "Required, cannot be future." },
 } };
-schemas.OutreachLinkedinSend = { type: "object", properties: { ...schemas.RecordOutreachLinkedinSend.properties, recorded_by: { ...uuid, readOnly: true }, created_at: { ...date, readOnly: true } } };
+schemas.OutreachLinkedinSend = { type: "object", properties: { ...schemas.RecordOutreachLinkedinSend.properties, recorded_by: { type: "integer", minimum: 1, readOnly: true, description: "users.id of the authenticated admin" }, created_at: { ...date, readOnly: true } } };
 spec.paths["/api/outreach/linkedin-sends"] = {
   post: operation("Record a standalone manual LinkedIn send", { input: "RecordOutreachLinkedinSend", data: ref("OutreachLinkedinSend"), created: true, write: true,
     description: "Admin required. Actor comes from authenticated token. Creates no sequence and sends no message. Identical retry returns original record with 201; changed payload or actor for the same ID returns 409. Do not also complete a sequence step for the same real-world send." }),
