@@ -2158,7 +2158,7 @@
             "type": "integer",
             "minimum": 0,
             "nullable": true,
-            "description": "Completed LinkedIn sequence steps within the period; standalone LinkedIn messages are not tracked."
+            "description": "Completed LinkedIn sequence steps plus standalone manual send records by sent_at within the period. Stable activity IDs deduplicate retries."
           },
           "response_rate": {
             "type": "number",
@@ -2576,6 +2576,73 @@
             }
           }
         ]
+      },
+      "RecordOutreachLinkedinSend": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "lead_id",
+          "message",
+          "sent_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stable client activity ID; reuse the same ID and payload on retries."
+          },
+          "lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Exact message text. Whitespace-only text is invalid; no trimming or escaping is applied."
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Required, cannot be future."
+          }
+        }
+      },
+      "OutreachLinkedinSend": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stable client activity ID; reuse the same ID and payload on retries."
+          },
+          "lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Exact message text. Whitespace-only text is invalid; no trimming or escaping is applied."
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Required, cannot be future."
+          },
+          "recorded_by": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        }
       }
     }
   },
@@ -7955,7 +8022,7 @@
           "Outreach"
         ],
         "summary": "Aggregate Outreach card metrics for one reporting period",
-        "description": "Authenticated read. Completed LinkedIn steps count as sent. Response rate uses distinct contacted leads with manual replies in the same period after contact. Meetings count original bookings, including later cancellations. Unavailable metrics are null; installed tracking with no activity is zero. Missing stats schema returns 200 with null metrics and migration guidance. Unexpected failures remain errors.",
+        "description": "Authenticated read. Completed LinkedIn steps count as sent. Response rate uses distinct contacted leads with manual replies in the same period after contact. Meetings count original bookings, including later cancellations. Unavailable metrics are null; installed tracking with no activity is zero. Missing stats schema returns 200 with null metrics and migration guidance. Unexpected failures remain errors. Standalone manual LinkedIn sends also contribute to linkedin_sent and distinct contacted leads after the LinkedIn activity migration.",
         "security": [
           {
             "bearerAuth": []
@@ -8418,6 +8485,172 @@
           },
           "503": {
             "description": "Apply scripts/outreach-activity-migration.sql to enable tracking."
+          }
+        }
+      }
+    },
+    "/api/outreach/linkedin-sends": {
+      "post": {
+        "tags": [
+          "Outreach"
+        ],
+        "summary": "Record a standalone manual LinkedIn send",
+        "description": "Admin required. Actor comes from authenticated token. Creates no sequence and sends no message. Identical retry returns original record with 201; changed payload or actor for the same ID returns 409. Do not also complete a sequence step for the same real-world send.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordOutreachLinkedinSend"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OutreachLinkedinSend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin required"
+          },
+          "404": {
+            "description": "Lead or meeting not found"
+          },
+          "409": {
+            "description": "Conflicting activity ID or duplicate lead/meeting time"
+          },
+          "500": {
+            "description": "Database operation failed"
+          },
+          "503": {
+            "description": "Tracking migration unavailable; apply scripts/outreach-linkedin-sends-migration.sql."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Outreach"
+        ],
+        "summary": "List standalone LinkedIn sends for a lead",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lead_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "linkedin_sends": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/OutreachLinkedinSend"
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "500": {
+            "description": "Database operation failed"
+          },
+          "503": {
+            "description": "Tracking migration unavailable; apply scripts/outreach-linkedin-sends-migration.sql."
           }
         }
       }

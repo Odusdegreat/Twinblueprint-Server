@@ -3,6 +3,11 @@ import { z } from "zod/v4";
 const timestamp = z.iso.datetime({ offset: true });
 const pastTimestamp = timestamp.refine(value => Date.parse(value) <= Date.now(), "Time cannot be in the future");
 const notes = z.string().max(10000);
+export const recordLinkedinSendSchema = z.object({
+  id: z.uuid(), lead_id: z.uuid(),
+  message: z.string().max(10000).refine(value => value.trim().length > 0, "Message is required"),
+  sent_at: pastTimestamp,
+}).strict();
 export const outreachPeriodSchema = z.object({ start: timestamp.optional(), end: timestamp.optional() }).strict()
   .refine(value => !!value.start === !!value.end, "Provide both start and end, or omit both")
   .refine(value => !value.start || Date.parse(value.start) < Date.parse(value.end!), "End must be after start");

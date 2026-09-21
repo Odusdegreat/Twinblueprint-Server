@@ -34,15 +34,17 @@ export const getOutreachStats = async (input: { start?: string; end?: string }) 
   return { ...metrics, availability, period, unavailable_reason, scheduler_enabled: process.env.OUTREACH_SCHEDULER_ENABLED === "true" };
 };
 
-export const recordOutreachActivity = async (kind: "reply" | "meeting", input: Record<string, unknown>) => {
+export const recordOutreachActivity = async (kind: "reply" | "meeting" | "linkedin_send", input: Record<string, unknown>) => {
   const { data, error } = await supabase.rpc(`record_outreach_${kind}`, { p_input: input }).abortSignal(AbortSignal.timeout(30000));
+  if (error && kind === "linkedin_send" && missingSchema(error.code)) throw Object.assign(new Error("LinkedIn activity tracking is not installed. Apply scripts/outreach-linkedin-sends-migration.sql."), { statusCode: 503 });
   if (error) throw databaseError(error, `Failed to record Outreach ${kind}`);
   return data;
 };
 
-export const listOutreachActivity = async (kind: "replies" | "meetings", leadId: string, page: number, limit: number) => {
+export const listOutreachActivity = async (kind: "replies" | "meetings" | "linkedin_sends", leadId: string, page: number, limit: number) => {
   const { data, count, error } = await supabase.from(`outreach_${kind}`).select("*", { count: "exact" })
     .eq("lead_id", leadId).order("created_at", { ascending: false }).order("id", { ascending: false }).range((page - 1) * limit, page * limit - 1);
+  if (error && kind === "linkedin_sends" && missingSchema(error.code)) throw Object.assign(new Error("LinkedIn activity tracking is not installed. Apply scripts/outreach-linkedin-sends-migration.sql."), { statusCode: 503 });
   if (error) throw databaseError(error, `Failed to retrieve Outreach ${kind}`);
   return { [kind]: data ?? [], pagination: { page, limit, total: count ?? 0, pages: Math.ceil((count ?? 0) / limit) } };
 };

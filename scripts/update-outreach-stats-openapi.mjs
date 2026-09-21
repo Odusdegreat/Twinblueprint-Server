@@ -10,7 +10,7 @@ const count = { type: "integer", minimum: 0, nullable: true };
 const channels = { type: "string", enum: ["linkedin", "email", "phone"] };
 const statuses = { type: "string", enum: ["booked", "completed", "cancelled", "no_show"] };
 schemas.OutreachStats = { type: "object", properties: {
-  linkedin_sent: { ...count, description: "Completed LinkedIn sequence steps within the period; standalone LinkedIn messages are not tracked." },
+  linkedin_sent: { ...count, description: "Completed LinkedIn sequence steps plus standalone manual send records by sent_at within the period. Stable activity IDs deduplicate retries." },
   response_rate: { type: "number", minimum: 0, maximum: 100, nullable: true, description: "100 * numerator / denominator, two decimal places; zero when tracked with no contacts." },
   response_rate_numerator: { ...count, description: "Distinct contacted leads with a recorded reply in the same period, at or after their first contact in that period." },
   response_rate_denominator: { ...count, description: "Distinct leads with a non-failed/non-bounced sent email or completed LinkedIn/phone touch in the period." },
@@ -64,4 +64,21 @@ const patch = operation("Reschedule a meeting or update its outcome", { input: "
   parameters: [{ name: "meetingId", in: "path", required: true, schema: uuid }], description: "Admin required. Meeting ID, lead and original booking time are immutable. Outcomes and rescheduling do not create additional bookings." });
 patch.responses[503] = { description: "Apply scripts/outreach-activity-migration.sql to enable tracking." };
 spec.paths["/api/outreach/meetings/{meetingId}"] = { patch };
+schemas.RecordOutreachLinkedinSend = { type: "object", additionalProperties: false, required: ["id", "lead_id", "message", "sent_at"], properties: {
+  id: { ...uuid, description: "Stable client activity ID; reuse the same ID and payload on retries." }, lead_id: uuid,
+  message: { type: "string", minLength: 1, maxLength: 10000, description: "Exact message text. Whitespace-only text is invalid; no trimming or escaping is applied." },
+  sent_at: { ...date, description: "Required, cannot be future." },
+} };
+schemas.OutreachLinkedinSend = { type: "object", properties: { ...schemas.RecordOutreachLinkedinSend.properties, recorded_by: { ...uuid, readOnly: true }, created_at: { ...date, readOnly: true } } };
+spec.paths["/api/outreach/linkedin-sends"] = {
+  post: operation("Record a standalone manual LinkedIn send", { input: "RecordOutreachLinkedinSend", data: ref("OutreachLinkedinSend"), created: true, write: true,
+    description: "Admin required. Actor comes from authenticated token. Creates no sequence and sends no message. Identical retry returns original record with 201; changed payload or actor for the same ID returns 409. Do not also complete a sequence step for the same real-world send." }),
+  get: operation("List standalone LinkedIn sends for a lead", { parameters: [
+    { name: "lead_id", in: "query", required: true, schema: uuid },
+    { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+    { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+  ], data: { type: "object", properties: { linkedin_sends: { type: "array", items: ref("OutreachLinkedinSend") }, pagination } } }),
+};
+for (const method of ["get", "post"]) spec.paths["/api/outreach/linkedin-sends"][method].responses[503] = { description: "Tracking migration unavailable; apply scripts/outreach-linkedin-sends-migration.sql." };
+spec.paths["/api/outreach/stats"].get.description += " Standalone manual LinkedIn sends also contribute to linkedin_sent and distinct contacted leads after the LinkedIn activity migration.";
 writeFileSync(file, JSON.stringify(spec, null, 2) + "\n");

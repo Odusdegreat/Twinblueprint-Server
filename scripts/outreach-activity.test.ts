@@ -2,15 +2,19 @@ import { afterAll, beforeEach, expect, mock, spyOn, test } from "bun:test";
 import express from "express";
 import jwt from "jsonwebtoken";
 import { outreachPeriodSchema, recordReplySchema, recordMeetingSchema, updateMeetingSchema } from "../src/validations/outreach-activity.validation.ts";
+import { recordLinkedinSendSchema } from "../src/validations/outreach-activity.validation.ts";
+import { sanitizeInput } from "../src/middleware/security.ts";
 
 let result: { data: any; error: any };
 const rpc = mock(() => ({ abortSignal: async () => result }));
-mock.module("../src/config/supabase.ts", () => ({ supabase: { rpc } }));
+const query: any = { select: mock(() => query), eq: mock(() => query), order: mock(() => query), range: mock(async () => ({ data: [], count: 0, error: null })) };
+const from = mock(() => query);
+mock.module("../src/config/supabase.ts", () => ({ supabase: { rpc, from } }));
 mock.module("../src/config/env.config.ts", () => ({ env: { JWT_SECRET: "activity-test-secret", RESEND_API_KEY: "re_test", FROM_EMAIL: "sender@example.test" } }));
 const service = await import("../src/services/outreach-activity.service.ts");
 const { default: router } = await import("../src/routes/outreach.routes.ts");
 import { errorHandler } from "../src/middleware/errorHandler.ts";
-const app = express(); app.use(express.json()); app.use("/api/outreach", router); app.use(errorHandler);
+const app = express(); app.use(express.json()); app.use(sanitizeInput); app.use("/api/outreach", router); app.use(errorHandler);
 const server = app.listen(0, "127.0.0.1");
 await new Promise<void>(resolve => server.on("listening", resolve));
 const base = `http://127.0.0.1:${(server.address() as { port: number }).port}/api/outreach`;
@@ -83,4 +87,37 @@ test("reply and meeting writes require admin; valid recording uses the persisten
   }
   expect(rpc).not.toHaveBeenCalled();
   expect((await fetch(`${base}/replies`, { method: "POST", headers: { ...auth("admin"), "content-type": "application/json" }, body: JSON.stringify({ id, lead_id: id, channel: "linkedin" }) })).status).toBe(201);
+});
+
+const linkedinInput = { id, lead_id: id, message: "  Hi <Sam> & \"team\"!\nExact text.  ", sent_at: "2026-01-05T12:00:00Z" };
+test("manual LinkedIn validation preserves text and rejects invalid or spoofed fields", () => {
+  expect(recordLinkedinSendSchema.parse(linkedinInput).message).toBe(linkedinInput.message);
+  for (const patch of [{ id: "invalid" }, { lead_id: "invalid" }, { message: " \n " }, { message: "x".repeat(10001) }, { sent_at: undefined }, { sent_at: new Date(Date.now()+60000).toISOString() }, { recorded_by: id }, { sequence_id: id }]) {
+    expect(recordLinkedinSendSchema.safeParse({ ...linkedinInput, ...patch }).success).toBe(false);
+  }
+});
+test("manual LinkedIn recording requires admin and uses authenticated identity and exact text", async () => {
+  const send = (headers = {}, input = linkedinInput) => fetch(`${base}/linkedin-sends`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(input) });
+  expect((await send()).status).toBe(401);
+  expect((await send(auth("user"))).status).toBe(403);
+  expect(rpc).not.toHaveBeenCalled();
+  expect((await send(auth("admin"))).status).toBe(201);
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenCalledWith("record_outreach_linkedin_send", { p_input: { ...linkedinInput, recorded_by: "1" } });
+});
+test("manual LinkedIn conflicts, missing leads, and unavailable migrations map to HTTP errors", async () => {
+  for (const [code, statusCode] of [["23505",409],["23503",404],["22023",400],["PGRST202",503]] as const) {
+    result.error = { code, message: "Storage error" };
+    await expect(service.recordOutreachActivity("linkedin_send", linkedinInput)).rejects.toMatchObject({ statusCode });
+  }
+});
+test("manual LinkedIn retrieval requires authentication and filters and paginates by lead", async () => {
+  expect((await fetch(`${base}/linkedin-sends?lead_id=${id}`)).status).toBe(401);
+  expect((await fetch(`${base}/linkedin-sends?lead_id=bad`, { headers: auth("admin") })).status).toBe(400);
+  const response = await fetch(`${base}/linkedin-sends?lead_id=${id}&page=2&limit=5`, { headers: auth("user") });
+  expect(response.status).toBe(200);
+  expect(from).toHaveBeenCalledWith("outreach_linkedin_sends");
+  expect(query.eq).toHaveBeenCalledWith("lead_id", id);
+  expect(query.range).toHaveBeenCalledWith(5,9);
+  expect(await response.json()).toMatchObject({ success: true, data: { linkedin_sends: [], pagination: { page: 2, limit: 5, total: 0 } } });
 });

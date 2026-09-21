@@ -92,6 +92,7 @@ const VALIDATION_FIELD_MESSAGES: Readonly<Record<string, string>> = {
   notes: "Notes are required",
   scheduled_at: "A valid scheduled time is required",
   replied_at: "A valid replied time is required",
+  sent_at: "A valid non-future sent time is required",
   completed_at: "A valid completion time is required",
   due_at: "A valid due time is required",
   outcome: "Outcome is required",

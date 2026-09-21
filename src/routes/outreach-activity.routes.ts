@@ -10,14 +10,17 @@ router.get("/stats", async (req, res, next) => {
   if (!result.success) { next(result.error); return; }
   res.json({ success: true, data: await service.getOutreachStats(result.data) });
 });
-for (const kind of ["replies", "meetings"] as const) {
+for (const kind of ["replies", "meetings", "linkedin-sends"] as const) {
   router.get(`/${kind}`, async (req, res, next) => {
     const result = schemas.outreachActivityListSchema.safeParse(req.query);
     if (!result.success) { next(result.error); return; }
     const { lead_id, page, limit } = result.data;
-    res.json({ success: true, data: await service.listOutreachActivity(kind, lead_id, page, limit) });
+    res.json({ success: true, data: await service.listOutreachActivity(kind === "linkedin-sends" ? "linkedin_sends" : kind, lead_id, page, limit) });
   });
 }
+router.post("/linkedin-sends", authorize("admin"), validate(schemas.recordLinkedinSendSchema), async (req, res) => {
+  res.status(201).json({ success: true, data: await service.recordOutreachActivity("linkedin_send", { ...req.body, recorded_by: req.userId }) });
+});
 router.post("/replies", authorize("admin"), validate(schemas.recordReplySchema), async (req, res) => {
   res.status(201).json({ success: true, data: await service.recordOutreachActivity("reply", req.body) });
 });
