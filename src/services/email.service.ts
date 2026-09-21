@@ -70,14 +70,14 @@ class EmailService {
     to: string;
     fullName: string;
   }): Promise<EmailResponse> {
-    const crmLoginUrl = `${env.CLIENT_URL.replace(/\/$/, "")}/login`;
+    const crmUrl = `${env.CLIENT_URL.replace(/\/$/, "")}/crm`;
 
     const html = `
       <h2>New Lead Submitted</h2>
       <p>A new lead has been submitted through the TwinBlueprint website.</p>
       <br>
       <a
-        href="${crmLoginUrl}"
+        href="${crmUrl}"
         style="
           display:inline-block;
           padding:14px 28px;
