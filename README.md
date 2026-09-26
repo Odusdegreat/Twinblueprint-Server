@@ -85,7 +85,30 @@ Copy `.env.example` to `.env` and fill in:
 | `RESEND_API_KEY` | No | Required for email sending |
 | `PORT` | No | Default `5000` |
 | `CLIENT_URL` | No | Frontend origin for CORS; fallback when `CLIENT_URLS` is unset |
-| `CLIENT_URLS` | No | Comma-separated approved CORS origins; the production origin `https://twinblueprint.vercel.app` is always included |
+| `CLIENT_URLS` | No | Comma-separated approved CORS origins; the production origins `https://twinblueprint.com`, `https://www.twinblueprint.com`, `https://crm.twinblueprint.com` and the preview origin `https://twinblueprint.vercel.app` are always included |
+
+### Cross-origin auth
+
+The API is served from its own host, so it is a different site than `twinblueprint.com`.
+The `token` cookie is therefore host-only for the API host — do not add a `Domain`
+attribute for the frontend domains, browsers would reject it and the frontend hosts never
+read the cookie. Sessions are shared between the main site and the `crm` subdomain because
+both call the same API host. A deployed API must send the cookie as `SameSite=None; Secure`
+so browsers attach it to those cross-site calls; `authenticate` compensates by rejecting
+unsafe methods that are authenticated by cookie from an unapproved `Origin`. Clients that
+send `Authorization: Bearer` instead are unaffected.
+
+| Variable | Required | Description |
+|---|---|---|
+| `NODE_ENV` | Yes in production | `production` enables the cross-site cookie settings and combined request logs |
+| `AUTH_COOKIE_SAME_SITE` | No | Overrides the cookie `SameSite`; use `none` for a cross-site API |
+| `AUTH_COOKIE_SECURE` | No | Overrides the cookie `Secure` flag; `true` is required whenever `SameSite=None` |
+
+`NODE_ENV=production` is the intended configuration. The overrides exist so a deployed
+service that reports another `NODE_ENV` can still persist sessions, and the process logs a
+warning at startup when `RENDER=true` but the cookie would not survive a cross-site call.
+Setting `AUTH_COOKIE_SAME_SITE=none` without `AUTH_COOKIE_SECURE=true` fails at boot,
+because browsers reject that combination.
 
 ## Running
 

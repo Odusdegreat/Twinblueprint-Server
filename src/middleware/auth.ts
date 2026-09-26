@@ -17,17 +17,29 @@ declare global {
   }
 }
 
+const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
+
+// The auth cookie is SameSite=None so the front-end hosts can send it, which also means
+// any site can make the browser attach it. CORS only gates response reading, so unsafe
+// methods authenticated by the cookie must additionally come from an approved origin.
+// Bearer-token callers are unaffected: they are not ambient browser credentials.
 export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
+  const cookieToken = req.cookies?.token;
   const token =
-    req.cookies?.token ||
+    cookieToken ||
     req.headers.authorization?.replace("Bearer ", "");
 
   if (!token) {
     res.status(401).json({ success: false, message: "Authentication required" });
+    return;
+  }
+
+  if (cookieToken && !safeMethods.has(req.method) && !env.CLIENT_URLS.includes(req.headers.origin ?? "")) {
+    res.status(403).json({ success: false, message: "Untrusted origin for cookie authentication; send an Authorization: Bearer token instead" });
     return;
   }
 

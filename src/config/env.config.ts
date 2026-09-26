@@ -10,13 +10,22 @@ const requiredEnv = (key: string): string => {
   return value;
 };
 
+// Always approved regardless of CLIENT_URLS: the live front-end origins plus the
+// Vercel deployment kept for preview environments.
+const productionOrigins = [
+  "https://twinblueprint.com",
+  "https://www.twinblueprint.com",
+  "https://crm.twinblueprint.com",
+  "https://twinblueprint.vercel.app",
+];
+
 export const env = {
   // Server
   PORT: process.env.PORT || "5000",
   NODE_ENV: process.env.NODE_ENV || "development",
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:3000",
   CLIENT_URLS: [...new Set([
-    "https://twinblueprint.vercel.app",
+    ...productionOrigins,
     ...(process.env.CLIENT_URLS || process.env.CLIENT_URL || "http://localhost:3000")
       .split(",").map((url) => url.trim()).filter(Boolean),
   ])],

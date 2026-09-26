@@ -1,6 +1,7 @@
 import express from "express";
 import supplierRoutes from "./routes/supplier.routes.ts";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
 import { readRateLimitConfig } from "./config/rate-limit.config.ts";
@@ -98,6 +99,9 @@ app.use("/api", ...createApiLimiters(rateLimitConfig));
 // Body parsing with size limits
 app.use(express.json({ limit: "10kb", verify: (req, _res, buffer) => { (req as express.Request).rawBody = buffer; } }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
+
+// Must run before authenticate reads req.cookies for cookie-based sessions.
+app.use(cookieParser());
 
 // Input sanitization
 app.use(sanitizeInput);

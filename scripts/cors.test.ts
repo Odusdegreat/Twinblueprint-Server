@@ -66,11 +66,26 @@ test("validation and parser errors retain CORS", async () => {
 });
 
 test("existing origins remain approved and arbitrary origins are excluded", async () => {
-  for (const approved of ["https://approved.example", "http://localhost:3000"]) {
+  for (const approved of [
+    "https://approved.example",
+    "http://localhost:3000",
+    "https://twinblueprint.com",
+    "https://www.twinblueprint.com",
+    "https://crm.twinblueprint.com",
+    "https://twinblueprint.vercel.app",
+  ]) {
     checkCors(await fetch(`${base}/health`, { headers: { Origin: approved } }), approved);
   }
-  const denied = await fetch(`${base}/health`, { headers: { Origin: "https://unapproved.example" } });
-  expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+  for (const rejected of [
+    "https://unapproved.example",
+    "https://twinblueprint.com.evil.example",
+    "https://crm.twinblueprint.com.evil.example",
+    "https://eviltwinblueprint.com",
+    "http://twinblueprint.com",
+  ]) {
+    const denied = await fetch(`${base}/health`, { headers: { Origin: rejected } });
+    expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+  }
   const missing = await fetch(`${base}/missing`, { headers: { Origin: origin } });
   expect(missing.status).toBe(404);
   checkCors(missing);
