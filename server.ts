@@ -1,6 +1,7 @@
 import app from "./src/app.ts";
 import { cookieConfig } from "./src/config/cookies.ts";
 import { startSequenceWorker } from "./src/services/sequence-worker.service.ts";
+import { startArticleSyncScheduler } from "./src/services/article-sync.service.ts";
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -15,6 +16,7 @@ if (process.env.RENDER === "true" && !(cookieConfig.secure && cookieConfig.sameS
 }
 
 const stopSequenceWorker = process.env.OUTREACH_SCHEDULER_ENABLED === "true" ? startSequenceWorker() : async () => {};
+const stopArticleSync = process.env.ARTICLE_SYNC_ENABLED === "true" ? startArticleSyncScheduler() : () => {};
 
 const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -23,6 +25,7 @@ const server = app.listen(PORT, () => {
 const shutdown = (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
   const workerStopped = stopSequenceWorker();
+  stopArticleSync();
   server.close(async () => {
     await workerStopped;
     console.log("Server closed.");

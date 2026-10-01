@@ -22,6 +22,7 @@ import regionRoutes from "./routes/region.routes.ts";
 import outreachRoutes from "./routes/outreach.routes.ts";
 import webhookRoutes from "./routes/webhook.routes.ts";
 import opportunityRoutes from "./routes/opportunity.routes.ts";
+import articleRoutes from "./routes/article.routes.ts";
 import { errorHandler } from "./middleware/errorHandler.ts";
 import { INDUSTRIES } from "./config/industries.ts";
 import {
@@ -141,6 +142,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/regions", regionRoutes);
 app.use("/api/outreach", outreachRoutes);
 app.use("/api/webhooks", webhookRoutes);
+app.use("/api/articles", articleRoutes);
 
 // 404 handler
 app.use((_req, res) => {
